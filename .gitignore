@@ -1,0 +1,12 @@
+# Replay Folders
+replays
+ranked-replays
+Rank Pools
+__pycache__
+
+# Active Database
+player_defensive_stats.txt
+player_defensive_war.txt
+player_offensive_stats.txt
+player_offensive_war.txt
+player_war.txt

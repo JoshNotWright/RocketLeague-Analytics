@@ -11,6 +11,7 @@ def get_replay_ids(player_name, playlist, count):
         "player-name": player_name,
         "playlist": playlist,
         "count": count,
+        "season": "f10",
         "sort-by": "replay-date"
     }
 

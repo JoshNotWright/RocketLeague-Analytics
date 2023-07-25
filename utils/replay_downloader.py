@@ -2,7 +2,7 @@ import os
 import requests
 import utils.get_replay_ids as get_replay_ids
 import time
-from match_id import get_match_id
+from utils.match_id import get_match_id
 
 def download_player_replays(player, count):
     base_url = "https://ballchasing.com/dl/stats/players/"

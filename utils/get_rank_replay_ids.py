@@ -12,6 +12,7 @@ def get_rank_replay_ids(rank, playlist, count):
         "max-rank": rank,
         "playlist": playlist,
         "count": count,
+        "season": "f10",
         "sort-by": "replay-date"
     }
 

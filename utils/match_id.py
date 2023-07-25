@@ -8,8 +8,7 @@ def get_match_id(csv_path):
         rows = list(reader)  # convert reader to a list
         player_ids = [row['player id'][:2] for row in rows]
         top_player_id = player_ids[0]
-        game_duration = int(rows[-1]['game duration'])  # access the last row of the list
         score_sum = sum([int(row['score']) for row in rows])
-        match_id = ''.join(player_ids) + str(game_duration + score_sum)
+        match_id = ''.join(player_ids) + str(score_sum)
         return match_id
 

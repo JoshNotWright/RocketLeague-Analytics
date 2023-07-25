@@ -20,8 +20,11 @@ def calculate_defensive_war(row):
                     (demos_taken * -0.5) + (percentage_in_front_of_ball * -0.15) + \
                     (avg_distance_to_ball_no_possession * -0.001) + (time_most_back * 0.10)
 
+    if pct_defensive_third == 0:
+        return 0
+
     # divide defensive_war by pct_defensive_third
-    defensive_war = defensive_war / (pct_defensive_third)
+    defensive_war = defensive_war / pct_defensive_third
 
     return defensive_war
 

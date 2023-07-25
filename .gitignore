@@ -2,6 +2,7 @@
 replays
 ranked-replays
 Rank Pools
+RLCS Pools
 __pycache__
 
 # Active Database
@@ -10,3 +11,8 @@ player_defensive_war.txt
 player_offensive_stats.txt
 player_offensive_war.txt
 player_war.txt
+team_corrections.txt
+
+# Credentials
+credentials.json
+token.json

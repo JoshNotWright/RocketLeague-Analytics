@@ -7,8 +7,13 @@ from utils.get_replay_ids import get_replay_ids
 from war_calculation.calculate_war import calculate_war
 from utils.remove_duplicates import *
 from utils.scale_war import scale_war
+from utils.remove_friends import remove_friends
+import os
 
 players = get_unique_players.get_unique_players()
+
+# Banned Names. These names just simply break the code. I could try to fix each little edge case, but right now it seems to be extremely rare
+banned_names = ['"']
 
 # Download 25 replays for each player
 count = 25
@@ -18,6 +23,12 @@ num_players = len(players)
 stop_downloads = False
 
 for i, player in enumerate(players):
+
+    # Check if player is on the banned names list
+    if player in banned_names:
+        print(f"{player} is banned. Skipping...")
+        continue
+
     replay_ids = get_replay_ids(player, "ranked-doubles", count)
     if len(replay_ids) >= count:
         try:
@@ -29,7 +40,7 @@ for i, player in enumerate(players):
     else:
         print(f"{player} does not have enough replays available.")
 
-    # If downloads should be stopped, skip to the next step
+    # If downloads should be stopped or player is banned, break the loop
     if stop_downloads:
         break
 
@@ -52,7 +63,7 @@ with open("player_offensive_war.txt", "a") as f:
         print(f"\rProgress: {progress:.2f}%", end="")
 
 print(f"\rProgress: Complete", end="")
-#remove_duplicates_war('player_offensive_war.txt')
+remove_duplicates_war('player_offensive_war.txt')
 
 # Calculate average D WAR and total games for each player and save to text file
 print("\nCalculating Defensive WAR...")
@@ -152,5 +163,12 @@ with open("player_defensive_stats.txt", "a") as f:
 print(f"\rProgress: Complete", end="")
 remove_duplicates_stats('player_defensive_stats.txt')
 
+remove_friends()
 
+# Remove the "ranked-replays" directory
+if os.path.exists("ranked-replays"):
+    os.system("rmdir /s /q ranked-replays")
 
+# Remove the "replays" directory
+if os.path.exists("replays"):
+    os.system("rmdir /s /q replays")

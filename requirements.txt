@@ -1,0 +1,2 @@
+# Reproducible runtime used by CI and the local verification run (Python 3.12).
+numpy==2.3.5

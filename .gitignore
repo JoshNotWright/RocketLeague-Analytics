@@ -1,18 +1,19 @@
-# Replay Folders
-replays
-ranked-replays
-Rank Pools
-RLCS Pools
-__pycache__
-
-# Active Database
-player_defensive_stats.txt
-player_defensive_war.txt
-player_offensive_stats.txt
-player_offensive_war.txt
-player_war.txt
-team_corrections.txt
-
-# Credentials
-credentials.json
-token.json
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+*.egg-info/
+build/
+dist/
+.coverage
+htmlcov/
+.pytest_cache/
+data/
+output/
+demo-output/
+credentials*.json
+service-account*.json
+player_cache.pkl

@@ -1,21 +1,18 @@
-import os
-import sys
+"""Retired legacy workflow. See the explicit rlanalytics CLI and README.
 
-# add the path to the root directory to the system path
-root_path = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-sys.path.append(root_path)
+Legacy formulas, mutable text-file pipelines, scraping, spreadsheet updates,
+credential literals, pickle caches, and destructive cleanup are not executed.
+Old function-level APIs have intentionally been removed.
+"""
 
-# now you can import the module
-from utils.scale_war import scale_war
+def main():
+    import sys
+    print(
+        "This legacy workflow is retired. Use python -m rlanalytics --help "
+        "for explicit import, report, and analysis commands. No action was taken.",
+        file=sys.stderr,
+    )
+    return 2
 
-
-def calculate_war(offensive_war: float, defensive_war: float) -> float:
-    offensive_weight = 1
-    defensive_weight = 1
-    offensive_war = scale_war(offensive_war, "offensive")
-    defensive_war = scale_war(defensive_war, "defensive")
-    return (offensive_war * offensive_weight) + (defensive_war * defensive_weight)
-
-
-
-
+if __name__ == "__main__":
+    raise SystemExit(main())

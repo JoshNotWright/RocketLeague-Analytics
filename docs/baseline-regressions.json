@@ -1,0 +1,50 @@
+{
+  "offensive_zone_denominator": {
+    "30": 0.8350000000000001,
+    "3": 8.35,
+    "0.01": 2505.0,
+    "0": 0
+  },
+  "shooting_example": {
+    "one_goal_one_shot": 0.8350000000000001,
+    "two_goals_four_shots": 0.6733333333333333
+  },
+  "extra_save_and_shot_against": {
+    "before": 0.0,
+    "after": 0.055
+  },
+  "negative_defense_more_zone_time": {
+    "25": -0.12,
+    "50": -0.06
+  },
+  "same_rates_double_duration": {
+    "original": 1.31,
+    "double_duration": 1.8699999999999999
+  },
+  "minmax_before": {
+    "A": 1.0,
+    "B": 1.2
+  },
+  "minmax_after_new_defensive_outlier": {
+    "A": 1.0,
+    "B": 0.6599999999999999
+  },
+  "constant_range": "ZeroDivisionError",
+  "equal_sample_new_score": "A: 1.0, 20.0",
+  "different_match_id_collision": {
+    "match_one": "767676762000",
+    "match_two": "767676762000"
+  },
+  "mean_shooting_percentage": {
+    "reported": 50.0,
+    "total_goals_over_total_shots_pct": 10
+  },
+  "all_tied_defensive_percentiles": {
+    "saves": 100.0,
+    "shots_conceded": 0.0
+  },
+  "overall_game_counts": [
+    "A: 2.00,  40",
+    "B: 4.00,  40"
+  ]
+}

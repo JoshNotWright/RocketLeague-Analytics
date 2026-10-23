@@ -1,37 +1,18 @@
-def remove_duplicates_war(filename):
-    with open(filename, 'r') as f:
-        lines = f.readlines()
-        
-    players = {}
-    for line in lines:
-        data = line.strip().split(': ')
-        name = data[0]
-        war, games_played = map(float, data[1].split(', '))
-        if name not in players:
-            players[name] = (float(war), float(games_played))
-        else:
-            if games_played > players[name][1]:
-                players[name] = (float(war), float(games_played))
-    
-    with open(filename, 'w') as f:
-        for name, stats in players.items():
-            f.write(f"{name}: {stats[0]}, {stats[1]}\n")
+"""Retired legacy workflow. See the explicit rlanalytics CLI and README.
 
-def remove_duplicates_stats(filename):
-    with open(filename, 'r') as f:
-        lines = f.readlines()
+Legacy formulas, mutable text-file pipelines, scraping, spreadsheet updates,
+credential literals, pickle caches, and destructive cleanup are not executed.
+Old function-level APIs have intentionally been removed.
+"""
 
-    players = {}
-    for line in lines:
-        data = line.strip().split(';')
-        name = data[0]
-        stats = tuple(map(float, data[1:]))
-        if name not in players:
-            players[name] = stats
-        else:
-            if stats[-1] > players[name][-1]:
-                players[name] = stats
+def main():
+    import sys
+    print(
+        "This legacy workflow is retired. Use python -m rlanalytics --help "
+        "for explicit import, report, and analysis commands. No action was taken.",
+        file=sys.stderr,
+    )
+    return 2
 
-    with open(filename, 'w') as f:
-        for name, stats in players.items():
-            f.write(f"{name};{';'.join(str(s) for s in stats)}\n")
+if __name__ == "__main__":
+    raise SystemExit(main())

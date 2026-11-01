@@ -1,0 +1,216 @@
+"""Score any folder of replays with the fitted models and compare players with the GC+ reference.
+
+``build_reference`` summarises the GC+ training population (players with enough games) into
+per-metric quantiles so scoring needs only the small reference JSON and the three boosters.
+``score_folder`` parses replays, computes frame features and touch events, applies the models,
+derives value added and saves, shrinks per-player means, and writes a player report.
+
+The models are calibrated on GC+ ranked doubles. On other ranks the absolute probabilities
+are not calibrated; percentiles against the GC+ reference still say where a player's
+volume, positioning and value-added numbers sit relative to the top of the ladder.
+"""
+from __future__ import annotations
+
+import json
+from concurrent.futures import ProcessPoolExecutor, as_completed
+from pathlib import Path
+
+import numpy as np
+import polars as pl
+
+from . import value as value_mod
+from . import xg as xg_mod
+from .shrink import shrink_table
+
+QUANTILES = [0.05, 0.10, 0.25, 0.50, 0.75, 0.90, 0.95]
+# per-game player metrics shown in the report: (name, source table column, higher is better?)
+METRICS = [
+    ("touches", "touches", True), ("shots", "shots", True), ("xg", "xg", True), ("goals", "goals", True),
+    ("goals_above_xg", "goals_above_xg", True), ("mean_threat", "mean_threat", True),
+    ("value_added", "value_added", True), ("shots_faced", "shots_faced", None), ("gsax", "gsax", True),
+    ("avg_speed", "avg_speed", True), ("supersonic_frac", "supersonic_frac", True), ("avg_boost", "avg_boost", True),
+    ("low_boost_frac", "low_boost_frac", False), ("behind_ball_frac", "behind_ball_frac", None),
+    ("avg_dist_mate", "avg_dist_mate", None), ("last_man_low_boost_frac", "last_man_low_boost_frac", False),
+    ("challenge_win_rate", "challenge_win_rate", True), ("kickoff_time_to_ball", "kickoff_time_to_ball", False),
+    ("demos_inflicted", "demos_inflicted", True), ("demos_taken", "demos_taken", False),
+    ("big_pads", "big_pads", None), ("small_pads", "small_pads", None),
+]
+
+
+def _parse_one(path: str):
+    from .events import extract_touches
+    from .frames import extract
+    from .header import header_summary, parse
+    replay_id = Path(path).stem
+    try:
+        parsed = parse(path, network=True)
+        head = header_summary(parsed)
+        return replay_id, head, extract(parsed, replay_id=replay_id), extract_touches(parsed, replay_id=replay_id), None
+    except Exception as exc:  # noqa: BLE001
+        return replay_id, None, [], [], f"{type(exc).__name__}: {str(exc)[:200]}"
+
+
+def parse_folder(raw: Path, workers=None, limit: int = 0):
+    paths = sorted(str(p) for p in Path(raw).glob("*.replay"))
+    if limit:
+        paths = paths[:limit]
+    heads, frame_rows, touch_rows, failures = {}, [], [], {}
+    with ProcessPoolExecutor(max_workers=workers) as pool:
+        for future in as_completed([pool.submit(_parse_one, p) for p in paths]):
+            replay_id, head, fr, tr, err = future.result()
+            if err:
+                failures[replay_id] = err
+                continue
+            heads[replay_id] = head
+            frame_rows.extend(fr)
+            touch_rows.extend(tr)
+    return heads, pl.DataFrame(frame_rows, infer_schema_length=None), pl.DataFrame(touch_rows, infer_schema_length=None), failures
+
+
+def _player_id_column(frames: pl.DataFrame) -> pl.DataFrame:
+    from .events import PLATFORMS
+    return frames.with_columns(
+        (pl.col("frame_platform").replace_strict(PLATFORMS, default=pl.col("frame_platform").str.to_lowercase())
+         + ":" + pl.col("frame_uid")).alias("player_id"))
+
+
+def apply_models(touches: pl.DataFrame, models_dir: Path) -> pl.DataFrame:
+    import lightgbm as lgb
+    scored = touches
+    for name, spec in xg_mod.MODELS.items():
+        booster = lgb.Booster(model_file=str(models_dir / f"{name}.lgb.txt"))
+        features = booster.feature_name()
+        scored = scored.with_columns(pl.Series(name, booster.predict(xg_mod._matrix(scored, features))))
+    return scored
+
+
+def per_game_table(frames: pl.DataFrame, touches_scored: pl.DataFrame, heads: dict) -> pl.DataFrame:
+    """One row per player-game with frame features, xG/threat/value and save numbers."""
+    valued = value_mod.add_value(touches_scored)
+    xg_game = (valued.group_by("replay_id", "player_id")
+                     .agg(pl.col("shot").sum().alias("shots"),
+                          pl.col("scored").sum().alias("goals"), pl.col("touch_xg").sum().alias("xg"),
+                          pl.col("threat").mean().alias("mean_threat"), pl.col("value_added").sum().alias("value_added"))
+                     .with_columns((pl.col("goals") - pl.col("xg")).alias("goals_above_xg")))
+    faced = value_mod.saves(valued)
+    save_game = (faced.group_by("replay_id", pl.col("defender_id").alias("player_id"))
+                      .agg(pl.len().alias("shots_faced"), pl.col("gsax").sum()))
+    dates = pl.DataFrame({"replay_id": list(heads), "date": [h["date"] for h in heads.values()],
+                          "team0_score": [h["team0_score"] for h in heads.values()],
+                          "team1_score": [h["team1_score"] for h in heads.values()]})
+    table = (_player_id_column(frames).join(xg_game, on=["replay_id", "player_id"], how="left")
+                                       .join(save_game, on=["replay_id", "player_id"], how="left")
+                                       .join(dates, on="replay_id", how="left"))
+    return table.with_columns(pl.col("shots_faced").fill_null(0), pl.col("gsax").fill_null(0.0),
+                              (pl.col("team0_score") > pl.col("team1_score")).eq(pl.col("frame_team") == 0).alias("won"))
+
+
+def build_reference(player_game_xg: pl.DataFrame, player_game_value: pl.DataFrame, player_game_saves: pl.DataFrame,
+                    frame_features: pl.DataFrame, *, min_games: int = 30) -> dict:
+    """Quantiles of per-player means over GC+ players with at least ``min_games`` games."""
+    frames = _player_id_column(frame_features)
+    game = (frames.join(player_game_xg.select("replay_id", "player_id", "touches", "shots", "goals", "xg", "goals_above_xg", "mean_threat"),
+                        on=["replay_id", "player_id"], how="left")
+                  .join(player_game_value.select("replay_id", "player_id", "value_added"), on=["replay_id", "player_id"], how="left")
+                  .join(player_game_saves.select("replay_id", "player_id", "shots_faced", "gsax"), on=["replay_id", "player_id"], how="left")
+                  .with_columns(pl.col("shots_faced").fill_null(0), pl.col("gsax").fill_null(0.0)))
+    means = game.group_by("player_id").agg(pl.len().alias("games"), *[pl.col(c).mean().alias(c) for _, c, _ in METRICS if c in game.columns])
+    means = means.filter(pl.col("games") >= min_games)
+    # Shrinkage priors (population mean, between- and within-player variance) from the same players.
+    priors = shrink_table(game.filter(pl.col("player_id").is_in(means["player_id"].implode())),
+                          [c for _, c, _ in METRICS], min_games=min_games)
+    prior_by_col = {row["statistic"]: row for row in
+                    priors.unique(subset=["statistic"]).select("statistic", "population_mean", "between_var", "within_var_pooled").iter_rows(named=True)}
+    reference = {"min_games": min_games, "players": means.height, "metrics": {}}
+    for name, col, higher in METRICS:
+        if col not in means.columns:
+            continue
+        values = means[col].drop_nulls().to_numpy()
+        if len(values) == 0:
+            continue
+        prior = prior_by_col.get(col, {})
+        reference["metrics"][name] = {"higher_is_better": higher, "mean": float(values.mean()),
+                                      "quantiles": {str(q): float(np.quantile(values, q)) for q in QUANTILES},
+                                      "sorted": [float(v) for v in np.sort(values)],
+                                      "prior": {"mean": prior.get("population_mean"), "between_var": prior.get("between_var"),
+                                                "within_var": prior.get("within_var_pooled")}}
+    return reference
+
+
+def shrink_with_prior(reference: dict, name: str, raw_mean: float, games: int) -> tuple[float | None, float | None]:
+    """Shrink a player's raw mean toward the GC+ population using the reference priors."""
+    prior = (reference["metrics"].get(name) or {}).get("prior") or {}
+    mu, tau2, sigma2 = prior.get("mean"), prior.get("between_var"), prior.get("within_var")
+    if raw_mean is None or mu is None or tau2 is None or sigma2 is None or games <= 0:
+        return raw_mean, None
+    factor = tau2 / (tau2 + sigma2 / games) if (tau2 + sigma2 / games) > 0 else 0.0
+    return mu + factor * (raw_mean - mu), factor
+
+
+def percentile(reference: dict, name: str, value: float) -> float | None:
+    entry = reference["metrics"].get(name)
+    if entry is None or value is None:
+        return None
+    arr = np.asarray(entry["sorted"])
+    return float(np.searchsorted(arr, value, side="right") / len(arr) * 100)
+
+
+def score_folder(raw: Path, out: Path, *, models_dir: Path, reference_path: Path, workers=None, limit: int = 0,
+                 focus: str | None = None) -> dict:
+    out.mkdir(parents=True, exist_ok=True)
+    heads, frames, touches, failures = parse_folder(raw, workers=workers, limit=limit)
+    if frames.height == 0:
+        raise SystemExit(f"no replays parsed from {raw} ({len(failures)} failures)")
+    scored = apply_models(touches, models_dir)
+    table = per_game_table(frames, scored, heads)
+    table.write_parquet(out / "player_game.parquet")
+    scored.write_parquet(out / "touches_scored.parquet")
+    reference = json.loads(Path(reference_path).read_text())
+    columns = [c for _, c, _ in METRICS if c in table.columns]
+    players = (table.group_by("player_id").agg(pl.len().alias("games"), pl.col("frame_player_name").last().alias("name"),
+                                              pl.col("won").mean().alias("win_rate"),
+                                              *[pl.col(c).mean().alias(c) for c in columns])
+                    .sort("games", descending=True))
+    report = {"replays": len(heads), "failures": failures, "players": []}
+    for row in players.iter_rows(named=True):
+        entry = {"player_id": row["player_id"], "name": row["name"], "games": row["games"], "win_rate": row["win_rate"], "metrics": {}}
+        for name, col, _ in METRICS:
+            if col not in columns:
+                continue
+            # Shrink toward the GC+ population with its variances, so a handful of games cannot
+            # produce an extreme number; percentiles are taken on the shrunk mean.
+            shrunk_mean, factor = shrink_with_prior(reference, name, row[col], row["games"])
+            entry["metrics"][name] = {"raw": row[col], "shrunk": shrunk_mean, "shrink_factor": factor,
+                                      "gc_percentile": percentile(reference, name, shrunk_mean),
+                                      "gc_median": reference["metrics"].get(name, {}).get("quantiles", {}).get("0.5")}
+        report["players"].append(entry)
+    (out / "report.json").write_text(json.dumps(report, indent=1, default=str))
+    text = to_markdown(report, focus=focus)
+    (out / "report.md").write_text(text, encoding="utf-8")
+    report["markdown"] = text
+    return report
+
+
+def to_markdown(report: dict, *, focus: str | None = None, max_players: int = 6) -> str:
+    lines = [f"Scored {report['replays']} replays ({len(report['failures'])} failed to parse). "
+             "Shrunk values pull each player's mean toward the GC+ population in proportion to how noisy the "
+             "statistic is and how few games were seen; percentiles are of the shrunk value against GC+ "
+             "ranked-doubles players with 30+ games. The models are calibrated on that population, so treat "
+             "absolute xG/threat values at other ranks as relative, not literal.", ""]
+    players = report["players"]
+    if focus:
+        players = [p for p in players if focus.lower() in (p["name"] or "").lower() or focus in p["player_id"]] + \
+                  [p for p in players if not (focus.lower() in (p["name"] or "").lower() or focus in p["player_id"])]
+    for p in players[:max_players]:
+        lines += [f"## {p['name']} ({p['player_id']}), {p['games']} games, win rate {p['win_rate']:.2f}", "",
+                  "| metric (per game) | raw | shrunk | GC+ median | GC+ percentile |", "|---|---|---|---|---|"]
+        for name, m in p["metrics"].items():
+            if m["raw"] is None:
+                continue
+            pct = f"{m['gc_percentile']:.0f}" if m["gc_percentile"] is not None else "-"
+            med = f"{m['gc_median']:.3f}" if m["gc_median"] is not None else "-"
+            lines.append(f"| {name} | {m['raw']:.3f} | {m['shrunk']:.3f} | {med} | {pct} |")
+        lines.append("")
+    if len(players) > max_players:
+        lines.append(f"... {len(players) - max_players} more players in report.json")
+    return "\n".join(lines)

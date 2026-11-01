@@ -109,3 +109,46 @@ A constant-prior model is always reported.
 
 `rrrocket` (nickbabcock, v0.11.8) must be in `tools/` or on `PATH`. No ballchasing key is
 needed for any of this.
+
+## Crawling lower ranks
+
+The Kaggle dataset stops at Grand Champion. To extend the pipeline downwards,
+`rlreplay crawl` pulls replays straight from ballchasing.com at a chosen rank band and writes
+the same layout the loader already reads (`<out>/<name>/<id>.replay` plus a line-delimited
+`metadata.json` whose lines `rlreplay.meta.player_rows` consumes unchanged; `score` and
+`gameplay_duration` are `null` because they are dataset-level fields):
+
+```powershell
+$env:BALLCHASING_API_KEY = "<your key from https://ballchasing.com/upload>"
+.\.venv\Scripts\python -m rlreplay crawl --out data/crawl --name 2v2_diamond_champion `
+    --playlist ranked-doubles --min-rank diamond-1 --max-rank champion-3 `
+    --after 2025-06-01T00:00:00Z --tier free --max-replays 5000
+.\.venv\Scripts\python -m rlreplay meta-table --meta data/crawl/2v2_diamond_champion/metadata.json --out data/features/player_game_2v2_dc.parquet
+.\.venv\Scripts\python -m rlreplay extract    --raw data/crawl/2v2_diamond_champion --out data/features/frame_2v2_dc.parquet
+```
+
+The crawl is resumable: `crawl_state.json` in the output folder keeps the page cursor, the
+ids already saved and the newest replay date, so a restart (after Ctrl-C, a crash or a
+`--max-replays` stop) continues where it left off and never re-downloads a file that is
+already on disk. Once a listing is exhausted, the next run only asks for replays newer
+than the last one seen. Replays whose ballchasing status is `pending` or `failed` are
+recorded as deferred and retried on a later run.
+
+Quota caveats (from https://ballchasing.com/doc/api, enforced client-side at 90% of the
+published numbers, with `--tier` selecting the row that matches the key's Patreon tier):
+
+| Tier (`--tier`) | list replays | get replay | download file |
+|---|---|---|---|
+| free (default) | 2/s, 500/h | 2/s, 1000/h | 1/s, **200/h** |
+| gold | 2/s, 1000/h | 2/s, 2000/h | 2/s, 400/h |
+| diamond | 4/s, 2000/h | 4/s, 5000/h | 2/s, 1000/h |
+| champion | 8/s | 8/s | 2/s, 2000/h |
+| gc | 16/s | 16/s | 2/s |
+
+The file download is the binding constraint: a free key yields about 180 replays per hour
+(roughly 4000 per day), so a 5000-replay crawl takes more than a day of wall-clock time and
+is meant to be left running. A 429 from the server pauses every endpoint together
+(honouring `Retry-After` when sent, otherwise doubling from 10 s up to an hour). The key is
+read only from `BALLCHASING_API_KEY`, is never written to disk or printed, and a missing key
+exits with status 2 before any request is made. Lower-rank ballchasing uploads are a
+self-selected sample (players who choose to upload), not a random draw from the rank.

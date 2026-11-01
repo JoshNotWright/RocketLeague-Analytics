@@ -7,6 +7,7 @@
     python -m rlreplay extract     --raw data/raw/2v2 --out data/features/frame_2v2.parquet
     python -m rlreplay validate    --table ... --frames ... --out reports/v2-frames/extractor_validation.md
     python -m rlreplay experiment  --table ... --frames ... --out reports/ --train-end 2025-01-01 --valid-end 2025-07-01
+    python -m rlreplay crawl       --out data/crawl --name 2v2_diamond_champion --min-rank diamond-1 --max-rank champion-3
 """
 from __future__ import annotations
 
@@ -182,6 +183,76 @@ def cmd_value(args):
     print(report["markdown"])
 
 
+def _decisions_one(path: str, out_dir: str, hz: float, horizon: float):
+    import polars as pl
+    from .decisions import build_rows
+    from .header import parse
+    replay_id = Path(path).stem
+    target = Path(out_dir) / f"{replay_id}.parquet"
+    if target.exists():
+        return replay_id, 0, None
+    try:
+        rows = build_rows(parse(path, network=True), replay_id=replay_id, hz=hz, horizon=horizon)
+        if rows:
+            pl.DataFrame(rows, infer_schema_length=None).write_parquet(target)
+        return replay_id, len(rows), None
+    except Exception as exc:  # noqa: BLE001
+        return replay_id, 0, f"{type(exc).__name__}: {str(exc)[:200]}"
+
+
+def cmd_decisions_build(args):
+    paths = sorted(str(p) for p in Path(args.raw).glob("*.replay"))
+    if args.limit:
+        paths = paths[:args.limit]
+    Path(args.out).mkdir(parents=True, exist_ok=True)
+    started, total, failures = time.time(), 0, {}
+    with ProcessPoolExecutor(max_workers=args.workers) as pool:
+        futures = [pool.submit(_decisions_one, p, args.out, args.hz, args.horizon) for p in paths]
+        for n, future in enumerate(as_completed(futures), 1):
+            replay_id, count, error = future.result()
+            total += count
+            if error:
+                failures[replay_id] = error
+            if n % 200 == 0:
+                print(f"{n}/{len(paths)} replays, {total} rows, {len(failures)} failed, {time.time() - started:.0f}s", flush=True)
+    Path(args.out, "_failures.json").write_text(json.dumps(failures, indent=1))
+    print(f"{args.out}: {total} new rows from {len(paths)} replays, {len(failures)} failures, {time.time() - started:.0f}s")
+
+
+def cmd_decisions_fit(args):
+    import polars as pl
+    from .decisions import fit_policy
+    report = fit_policy(args.frames, pl.read_parquet(args.table), args.out, train_end=args.train_end,
+                        valid_end=args.valid_end, sample_rows=args.sample_rows)
+    print(report["markdown"])
+
+
+def cmd_build_reference(args):
+    import polars as pl
+    from .score import build_reference
+    reference = build_reference(pl.read_parquet(Path(args.xg_dir) / "player_game_xg.parquet"),
+                                pl.read_parquet(Path(args.value_dir) / "player_game_value.parquet"),
+                                pl.read_parquet(Path(args.value_dir) / "player_game_saves.parquet"),
+                                pl.read_parquet(args.frames), min_games=args.min_games)
+    Path(args.out).parent.mkdir(parents=True, exist_ok=True)
+    Path(args.out).write_text(json.dumps(reference, indent=0))
+    print(f"{args.out}: {reference['players']} reference players, {len(reference['metrics'])} metrics")
+
+
+def cmd_score(args):
+    from .score import score_folder
+    root = Path(__file__).resolve().parent
+    report = score_folder(Path(args.raw), Path(args.out), models_dir=Path(args.models),
+                          reference_path=Path(args.reference or root / "reference" / "gcplus_2v2.json"),
+                          workers=args.workers, limit=args.limit, focus=args.focus)
+    print(report["markdown"])
+
+
+def cmd_crawl(args):
+    from .crawl import main_from_args
+    return main_from_args(args)
+
+
 def cmd_validate(args):
     import polars as pl
     from .validate import compare, to_markdown
@@ -263,6 +334,28 @@ def main(argv=None):
     p = sub.add_parser("value"); p.add_argument("--touches-scored", required=True); p.add_argument("--out", required=True)
     p.add_argument("--min-games", type=int, default=30)
     p.set_defaults(func=cmd_value)
+    p = sub.add_parser("decisions-build"); p.add_argument("--raw", required=True); p.add_argument("--out", required=True)
+    p.add_argument("--hz", type=float, default=5.0); p.add_argument("--horizon", type=float, default=1.0)
+    p.add_argument("--workers", type=int, default=None); p.add_argument("--limit", type=int, default=0)
+    p.set_defaults(func=cmd_decisions_build)
+    p = sub.add_parser("decisions-fit"); p.add_argument("--frames", required=True); p.add_argument("--table", required=True)
+    p.add_argument("--out", required=True); p.add_argument("--train-end", required=True); p.add_argument("--valid-end", required=True)
+    p.add_argument("--sample-rows", type=int, default=3_000_000)
+    p.set_defaults(func=cmd_decisions_fit)
+    p = sub.add_parser("build-reference"); p.add_argument("--xg-dir", default="reports/v2-xg")
+    p.add_argument("--value-dir", default="reports/v2-value"); p.add_argument("--frames", default="data/features/frame_2v2.parquet")
+    p.add_argument("--min-games", type=int, default=30); p.add_argument("--out", default="rlreplay/reference/gcplus_2v2.json")
+    p.set_defaults(func=cmd_build_reference)
+    p = sub.add_parser("score", help="Score any folder of .replay files with the fitted models.")
+    p.add_argument("--raw", required=True); p.add_argument("--out", required=True)
+    p.add_argument("--models", default="reports/v2-xg"); p.add_argument("--reference", default=None)
+    p.add_argument("--workers", type=int, default=None); p.add_argument("--limit", type=int, default=0)
+    p.add_argument("--focus", default=None, help="player name or id to list first")
+    p.set_defaults(func=cmd_score)
+    p = sub.add_parser("crawl", help="crawl ballchasing.com replays at chosen ranks (needs BALLCHASING_API_KEY)")
+    from .crawl import add_arguments as _crawl_arguments
+    _crawl_arguments(p)
+    p.set_defaults(func=cmd_crawl)
     p = sub.add_parser("validate"); p.add_argument("--table", required=True); p.add_argument("--frames", required=True)
     p.add_argument("--out", default=None)
     p.set_defaults(func=cmd_validate)

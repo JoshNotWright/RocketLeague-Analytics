@@ -62,9 +62,10 @@ def saves(touches: pl.DataFrame) -> pl.DataFrame:
                   .when(pl.col("scored")).then(pl.col("opp_goalie_id"))
                   .when(defender_touched).then(pl.col("next_player_id"))
                   .otherwise(None))
+    context = [c for c in ("played_at", "out_of_time") if c in shots.columns]
     return (shots.with_columns(credited.alias("defender_id"))
                  .filter(pl.col("defender_id").is_not_null())
-                 .select("replay_id", "played_at", "out_of_time", "time", pl.col("player_id").alias("shooter_id"),
+                 .select("replay_id", *context, "time", pl.col("player_id").alias("shooter_id"),
                          "defender_id", pl.col("touch_xg").alias("xg_faced"), pl.col("scored").alias("conceded"))
                  .with_columns((pl.col("xg_faced") - pl.col("conceded").cast(pl.Float64)).alias("gsax")))
 

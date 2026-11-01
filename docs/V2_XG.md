@@ -177,6 +177,36 @@ barely predicts the other half. Shots faced per game (0.41) persists because it 
 role: who plays deeper. xG faced per shot does not persist at all, which says shot
 difficulty is not something the last defender controls in 2v2.
 
+## Shrinkage: turning the tables into estimates
+
+Every per-player number above is a raw mean, and the reliabilities show that for some
+statistics a raw mean over 100 games is mostly noise. `rlreplay/shrink.py` applies the
+standard empirical-Bayes correction: a player's mean is pulled toward the population mean by
+τ² / (τ² + σ²/n), where σ² is the pooled game-to-game variance and τ² the between-player
+variance estimated by the method of moments. A statistic with no real between-player spread
+gets τ² = 0 and every player lands on the population mean; a stable trait is barely moved.
+The priors fitted on the GC+ population are stored in `rlreplay/reference/gcplus_2v2.json`
+alongside the percentile tables, so any replay folder can be shrunk toward GC+ rather than
+toward itself.
+
+## Scoring your own replays
+
+```powershell
+.\.venv\Scripts\python -m rlreplay score --raw C:\path\to\replays --out reports\me --focus "your name"
+```
+
+parses every `.replay` in the folder, computes frame features and touch events, applies the
+three fitted boosters, derives value added and shots faced, shrinks each per-game metric
+toward the GC+ priors given how many games were seen, and writes `report.md` /
+`report.json` with raw, shrunk, GC+ median and GC+ percentile per metric. On 17 games of a
+2022 player, for example, raw goals above xG of +0.12 per game shrinks to +0.02 (percentile
+51), while touches per game, supersonic share and pad pickups keep most of their signal.
+That is the intended behaviour: the report refuses to call anyone a finisher on 17 games.
+
+The percentiles compare against GC+ players with 30 or more games, and the models are
+calibrated on GC+ play, so at other ranks the absolute xG and threat values are relative
+indicators rather than literal probabilities.
+
 ## What these numbers can and cannot support
 
 - **xG per shot and goals above xG are descriptive.** A player who beats their xG over 100

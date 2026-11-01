@@ -14,8 +14,13 @@ public GC+ replay dataset, computes per-player-game frame features, and tests wh
 predict outcomes better than ballchasing's summary stats under a strict time split. See
 [docs/V2_METHODOLOGY.md](docs/V2_METHODOLOGY.md) for the design and
 [docs/V2_RESULTS.md](docs/V2_RESULTS.md) for the numbers, and
-[docs/V2_XG.md](docs/V2_XG.md) for the touch-level expected-goals models built on the same
-replays. It needs no ballchasing key:
+[docs/V2_XG.md](docs/V2_XG.md) for the touch-level expected-goals, threat, value-added and
+save models built on the same replays, [docs/V2_DECISIONS.md](docs/V2_DECISIONS.md) for the
+frame-level decision policy, and [docs/GPU.md](docs/GPU.md) for training on the AMD GPU. To
+score a folder of your own replays against the GC+ reference:
+`python -m rlreplay score --raw <folder> --out reports/me`. Crawling lower ranks from
+ballchasing (`python -m rlreplay crawl`) needs `BALLCHASING_API_KEY` in the environment and
+is described at the end of the methodology doc. Everything else needs no ballchasing key:
 replays come one file at a time from Kaggle's public per-file endpoint, and parsing uses
 the `rrrocket` binary (nickbabcock) placed in `tools/`. Its extra dependencies are listed
 in `requirements-v2.txt`. `data/` is gitignored and may be a junction to a larger drive

@@ -1,0 +1,679 @@
+{
+ "window": 10,
+ "experiments": {
+  "all_games_won": {
+   "target": "won",
+   "train_end": "2025-01-01",
+   "valid_end": "2025-07-01",
+   "min_prev_games": 5,
+   "rows": {
+    "train": 62245,
+    "valid": 33979,
+    "test": 21595
+   },
+   "test_period": [
+    "2025-07-01 00:00:53+00:00",
+    "2026-04-27 23:13:06+00:00"
+   ],
+   "models": {
+    "constant": {
+     "metrics": {
+      "n": 21595,
+      "log_loss": 0.6931249512398283,
+      "auc": 0.5,
+      "brier": 0.2499888845661237,
+      "accuracy": 0.5042370919194258
+     }
+    },
+    "rank": {
+     "metrics": {
+      "n": 21595,
+      "log_loss": 0.6925821485626958,
+      "auc": 0.5035357982990116,
+      "brier": 0.24972528649381218,
+      "accuracy": 0.5052095392451956
+     },
+     "best_iteration": 74,
+     "n_features": 4,
+     "importances": [
+      {
+       "feature": "rank_diff",
+       "gain_share": 0.48768083828269154
+      },
+      {
+       "feature": "team_rank_mean",
+       "gain_share": 0.1998471226086641
+      },
+      {
+       "feature": "opp_rank_mean",
+       "gain_share": 0.19727641826493386
+      },
+      {
+       "feature": "rank_points",
+       "gain_share": 0.11519562084371046
+      }
+     ]
+    },
+    "rank+history": {
+     "metrics": {
+      "n": 21595,
+      "log_loss": 0.6890645030705507,
+      "auc": 0.5570535168006584,
+      "brier": 0.24793182202903347,
+      "accuracy": 0.5398471868488076
+     },
+     "best_iteration": 80,
+     "n_features": 9,
+     "importances": [
+      {
+       "feature": "prev_win_rate",
+       "gain_share": 0.3787253596266868
+      },
+      {
+       "feature": "n_prev_games",
+       "gain_share": 0.224722096753464
+      },
+      {
+       "feature": "days_since_prev",
+       "gain_share": 0.17495363386326068
+      },
+      {
+       "feature": "r10_goal_diff",
+       "gain_share": 0.12153252811051442
+      },
+      {
+       "feature": "rank_diff",
+       "gain_share": 0.03879042925926456
+      },
+      {
+       "feature": "r10_won",
+       "gain_share": 0.03622578546467432
+      },
+      {
+       "feature": "opp_rank_mean",
+       "gain_share": 0.013707351030659736
+      },
+      {
+       "feature": "team_rank_mean",
+       "gain_share": 0.00714579511262165
+      },
+      {
+       "feature": "rank_points",
+       "gain_share": 0.004197020778853865
+      }
+     ]
+    },
+    "rank+history+summary": {
+     "metrics": {
+      "n": 21595,
+      "log_loss": 0.6883040960510468,
+      "auc": 0.557459478033325,
+      "brier": 0.2475802082593433,
+      "accuracy": 0.5401250289418847
+     },
+     "best_iteration": 106,
+     "n_features": 86,
+     "importances": [
+      {
+       "feature": "prev_win_rate",
+       "gain_share": 0.11818917295811916
+      },
+      {
+       "feature": "n_prev_games",
+       "gain_share": 0.05577776152128331
+      },
+      {
+       "feature": "r10_core_shots",
+       "gain_share": 0.028067808232662184
+      },
+      {
+       "feature": "r10_movement_percent_high_air",
+       "gain_share": 0.019798053479302077
+      },
+      {
+       "feature": "r10_boost_percent_boost_75_100",
+       "gain_share": 0.0193408415216714
+      },
+      {
+       "feature": "r10_boost_amount_overfill",
+       "gain_share": 0.018704680746830456
+      },
+      {
+       "feature": "r10_movement_avg_powerslide_duration",
+       "gain_share": 0.018662730253655464
+      },
+      {
+       "feature": "days_since_prev",
+       "gain_share": 0.018644953316864426
+      },
+      {
+       "feature": "r10_boost_percent_full_boost",
+       "gain_share": 0.018068276339839914
+      },
+      {
+       "feature": "r10_positioning_percent_defensive_third",
+       "gain_share": 0.01730598230374273
+      },
+      {
+       "feature": "r10_core_score",
+       "gain_share": 0.016310688006275113
+      },
+      {
+       "feature": "r10_boost_amount_overfill_stolen",
+       "gain_share": 0.016174377142976152
+      },
+      {
+       "feature": "rank_diff",
+       "gain_share": 0.015277225849281513
+      },
+      {
+       "feature": "r10_goal_diff",
+       "gain_share": 0.014354194003223176
+      },
+      {
+       "feature": "r10_positioning_percent_offensive_third",
+       "gain_share": 0.014354110147530137
+      }
+     ]
+    }
+   }
+  },
+  "all_games_rank_change": {
+   "target": "rank_change",
+   "train_end": "2025-01-01",
+   "valid_end": "2025-07-01",
+   "min_prev_games": 5,
+   "rows": {
+    "train": 60847,
+    "valid": 32987,
+    "test": 18682
+   },
+   "test_period": [
+    "2025-07-01 00:00:53+00:00",
+    "2026-03-01 22:50:23+00:00"
+   ],
+   "models": {
+    "constant": {
+     "metrics": {
+      "n": 18682,
+      "mae": 0.20937533379887246,
+      "rmse": 0.5607140616344631,
+      "r2": -0.013572540557790225
+     }
+    },
+    "rank": {
+     "metrics": {
+      "n": 18682,
+      "mae": 0.25428837962491546,
+      "rmse": 0.45495980716799145,
+      "r2": 0.3327047958822843
+     },
+     "best_iteration": 121,
+     "n_features": 4,
+     "importances": [
+      {
+       "feature": "rank_points",
+       "gain_share": 0.7298072101631597
+      },
+      {
+       "feature": "team_rank_mean",
+       "gain_share": 0.2669963888283856
+      },
+      {
+       "feature": "opp_rank_mean",
+       "gain_share": 0.0018850144877823555
+      },
+      {
+       "feature": "rank_diff",
+       "gain_share": 0.0013113865206723057
+      }
+     ]
+    },
+    "rank+history": {
+     "metrics": {
+      "n": 18682,
+      "mae": 0.21155824591882647,
+      "rmse": 0.45073594170549647,
+      "r2": 0.3450376713785597
+     },
+     "best_iteration": 82,
+     "n_features": 9,
+     "importances": [
+      {
+       "feature": "rank_points",
+       "gain_share": 0.7147227316903312
+      },
+      {
+       "feature": "team_rank_mean",
+       "gain_share": 0.19298565182591665
+      },
+      {
+       "feature": "n_prev_games",
+       "gain_share": 0.04057815590388998
+      },
+      {
+       "feature": "prev_win_rate",
+       "gain_share": 0.028711103655059887
+      },
+      {
+       "feature": "days_since_prev",
+       "gain_share": 0.008336436783860222
+      },
+      {
+       "feature": "r10_goal_diff",
+       "gain_share": 0.007391990110499261
+      },
+      {
+       "feature": "r10_won",
+       "gain_share": 0.003127514904974649
+      },
+      {
+       "feature": "opp_rank_mean",
+       "gain_share": 0.002837485414002812
+      },
+      {
+       "feature": "rank_diff",
+       "gain_share": 0.0013089297114653965
+      }
+     ]
+    },
+    "rank+history+summary": {
+     "metrics": {
+      "n": 18682,
+      "mae": 0.21060006135838408,
+      "rmse": 0.4531964444890017,
+      "r2": 0.33786746347329977
+     },
+     "best_iteration": 77,
+     "n_features": 86,
+     "importances": [
+      {
+       "feature": "rank_points",
+       "gain_share": 0.5891340895596509
+      },
+      {
+       "feature": "team_rank_mean",
+       "gain_share": 0.12801665401924273
+      },
+      {
+       "feature": "n_prev_games",
+       "gain_share": 0.0641143427588006
+      },
+      {
+       "feature": "opp_rank_mean",
+       "gain_share": 0.040806715277011386
+      },
+      {
+       "feature": "rank_diff",
+       "gain_share": 0.01853293484315997
+      },
+      {
+       "feature": "r10_movement_percent_low_air",
+       "gain_share": 0.010378904506511882
+      },
+      {
+       "feature": "prev_win_rate",
+       "gain_share": 0.008602448695152766
+      },
+      {
+       "feature": "r10_movement_percent_ground",
+       "gain_share": 0.007814499074225593
+      },
+      {
+       "feature": "r10_boost_percent_full_boost",
+       "gain_share": 0.007787854206729174
+      },
+      {
+       "feature": "r10_boost_amount_overfill",
+       "gain_share": 0.0057678197107958245
+      },
+      {
+       "feature": "r10_movement_avg_powerslide_duration",
+       "gain_share": 0.005753516331825571
+      },
+      {
+       "feature": "r10_boost_amount_used_while_supersonic",
+       "gain_share": 0.005711711285162437
+      },
+      {
+       "feature": "r10_movement_avg_speed",
+       "gain_share": 0.005081316779569486
+      },
+      {
+       "feature": "r10_movement_percent_supersonic_speed",
+       "gain_share": 0.004615325678579559
+      },
+      {
+       "feature": "r10_boost_time_zero_boost",
+       "gain_share": 0.0038479236199402476
+      }
+     ]
+    }
+   }
+  },
+  "frame_subset_won": {
+   "target": "won",
+   "train_end": "2025-01-01",
+   "valid_end": "2025-07-01",
+   "min_prev_games": 5,
+   "rows": {
+    "train": 1160,
+    "valid": 964,
+    "test": 736
+   },
+   "test_period": [
+    "2025-07-01 00:00:53+00:00",
+    "2026-03-01 02:22:04+00:00"
+   ],
+   "models": {
+    "constant": {
+     "metrics": {
+      "n": 736,
+      "log_loss": 0.6952341460805971,
+      "auc": 0.5,
+      "brier": 0.25104335224629065,
+      "accuracy": 0.44972826086956524
+     }
+    },
+    "rank": {
+     "metrics": {
+      "n": 736,
+      "log_loss": 0.6952341460805971,
+      "auc": 0.5,
+      "brier": 0.25104335224629065,
+      "accuracy": 0.44972826086956524
+     },
+     "best_iteration": 1,
+     "n_features": 4,
+     "importances": [
+      {
+       "feature": "rank_diff",
+       "gain_share": 0.0
+      },
+      {
+       "feature": "opp_rank_mean",
+       "gain_share": 0.0
+      },
+      {
+       "feature": "team_rank_mean",
+       "gain_share": 0.0
+      },
+      {
+       "feature": "rank_points",
+       "gain_share": 0.0
+      }
+     ]
+    },
+    "rank+history": {
+     "metrics": {
+      "n": 736,
+      "log_loss": 0.6913813789095288,
+      "auc": 0.5470776919920928,
+      "brier": 0.24911334879579658,
+      "accuracy": 0.5489130434782609
+     },
+     "best_iteration": 28,
+     "n_features": 9,
+     "importances": [
+      {
+       "feature": "prev_win_rate",
+       "gain_share": 0.3576056864740875
+      },
+      {
+       "feature": "days_since_prev",
+       "gain_share": 0.2546755529217024
+      },
+      {
+       "feature": "n_prev_games",
+       "gain_share": 0.25402193346844926
+      },
+      {
+       "feature": "r10_goal_diff",
+       "gain_share": 0.07088926902023594
+      },
+      {
+       "feature": "r10_won",
+       "gain_share": 0.06280755811552488
+      },
+      {
+       "feature": "rank_diff",
+       "gain_share": 0.0
+      },
+      {
+       "feature": "opp_rank_mean",
+       "gain_share": 0.0
+      },
+      {
+       "feature": "team_rank_mean",
+       "gain_share": 0.0
+      },
+      {
+       "feature": "rank_points",
+       "gain_share": 0.0
+      }
+     ]
+    },
+    "rank+history+summary": {
+     "metrics": {
+      "n": 736,
+      "log_loss": 0.6946265927599772,
+      "auc": 0.5161575472753721,
+      "brier": 0.2507395109953436,
+      "accuracy": 0.46875
+     },
+     "best_iteration": 5,
+     "n_features": 86,
+     "importances": [
+      {
+       "feature": "prev_win_rate",
+       "gain_share": 0.11516384216092643
+      },
+      {
+       "feature": "r10_positioning_avg_distance_to_mates",
+       "gain_share": 0.10596662769224331
+      },
+      {
+       "feature": "days_since_prev",
+       "gain_share": 0.09181701574504801
+      },
+      {
+       "feature": "r10_positioning_percent_offensive_third",
+       "gain_share": 0.07095490139953528
+      },
+      {
+       "feature": "r10_boost_amount_used_while_supersonic",
+       "gain_share": 0.058226048197874504
+      },
+      {
+       "feature": "r10_boost_count_collected_small",
+       "gain_share": 0.053942306929680245
+      },
+      {
+       "feature": "r10_movement_percent_boost_speed",
+       "gain_share": 0.04835019764426831
+      },
+      {
+       "feature": "r10_boost_avg_amount",
+       "gain_share": 0.04579933431635344
+      },
+      {
+       "feature": "r10_boost_count_stolen_small",
+       "gain_share": 0.04279058105965034
+      },
+      {
+       "feature": "r10_movement_total_distance",
+       "gain_share": 0.042754605548642965
+      },
+      {
+       "feature": "r10_boost_percent_full_boost",
+       "gain_share": 0.04109418684765257
+      },
+      {
+       "feature": "r10_positioning_time_offensive_half",
+       "gain_share": 0.03932312620228723
+      },
+      {
+       "feature": "r10_boost_amount_collected_small",
+       "gain_share": 0.03631471975083843
+      },
+      {
+       "feature": "r10_positioning_percent_defensive_half",
+       "gain_share": 0.032339737540310796
+      },
+      {
+       "feature": "r10_positioning_time_behind_ball",
+       "gain_share": 0.028636215297878794
+      }
+     ]
+    },
+    "rank+history+frame": {
+     "metrics": {
+      "n": 736,
+      "log_loss": 0.6944088775879018,
+      "auc": 0.5118346947148559,
+      "brier": 0.2506187915997227,
+      "accuracy": 0.5135869565217391
+     },
+     "best_iteration": 34,
+     "n_features": 31,
+     "importances": [
+      {
+       "feature": "r10_small_pads",
+       "gain_share": 0.12581270446804765
+      },
+      {
+       "feature": "prev_win_rate",
+       "gain_share": 0.09227081652813514
+      },
+      {
+       "feature": "days_since_prev",
+       "gain_share": 0.08289890083130216
+      },
+      {
+       "feature": "r10_touch_rate",
+       "gain_share": 0.0778559521946213
+      },
+      {
+       "feature": "r10_kickoff_time_to_ball",
+       "gain_share": 0.06202293312257643
+      },
+      {
+       "feature": "r10_avg_dist_mate",
+       "gain_share": 0.057763878318612995
+      },
+      {
+       "feature": "r10_behind_ball_frac",
+       "gain_share": 0.05274041086170527
+      },
+      {
+       "feature": "n_prev_games",
+       "gain_share": 0.050328758181654845
+      },
+      {
+       "feature": "r10_commit_dist_mate",
+       "gain_share": 0.04693025988671792
+      },
+      {
+       "feature": "r10_kickoffs",
+       "gain_share": 0.04350739629055395
+      },
+      {
+       "feature": "r10_kickoff_win_rate",
+       "gain_share": 0.03587422353388206
+      },
+      {
+       "feature": "r10_challenge_win_rate",
+       "gain_share": 0.029287918862875392
+      },
+      {
+       "feature": "r10_zero_boost_frac",
+       "gain_share": 0.0291969252885765
+      },
+      {
+       "feature": "r10_last_man_frac",
+       "gain_share": 0.027819067915245476
+      },
+      {
+       "feature": "r10_ground_frac",
+       "gain_share": 0.0261855422919158
+      }
+     ]
+    },
+    "rank+history+summary+frame": {
+     "metrics": {
+      "n": 736,
+      "log_loss": 0.6936000802940612,
+      "auc": 0.5296594681287531,
+      "brier": 0.25022480597923674,
+      "accuracy": 0.5122282608695652
+     },
+     "best_iteration": 12,
+     "n_features": 108,
+     "importances": [
+      {
+       "feature": "prev_win_rate",
+       "gain_share": 0.09532383444752554
+      },
+      {
+       "feature": "days_since_prev",
+       "gain_share": 0.05533512262836915
+      },
+      {
+       "feature": "r10_touch_rate",
+       "gain_share": 0.04618584263334212
+      },
+      {
+       "feature": "r10_small_pads",
+       "gain_share": 0.04590615181048032
+      },
+      {
+       "feature": "r10_boost_count_collected_small",
+       "gain_share": 0.044583113999453
+      },
+      {
+       "feature": "r10_avg_dist_mate",
+       "gain_share": 0.036648662654463524
+      },
+      {
+       "feature": "r10_movement_time_boost_speed",
+       "gain_share": 0.036096387467018654
+      },
+      {
+       "feature": "r10_positioning_time_behind_ball",
+       "gain_share": 0.03570635256138419
+      },
+      {
+       "feature": "r10_boost_amount_stolen",
+       "gain_share": 0.03455062757571522
+      },
+      {
+       "feature": "r10_positioning_time_defensive_half",
+       "gain_share": 0.03279182009019339
+      },
+      {
+       "feature": "r10_positioning_avg_distance_to_ball_possession",
+       "gain_share": 0.03209522954666001
+      },
+      {
+       "feature": "r10_boost_count_stolen_small",
+       "gain_share": 0.029376492359108053
+      },
+      {
+       "feature": "r10_positioning_percent_offensive_third",
+       "gain_share": 0.02808893633594834
+      },
+      {
+       "feature": "n_prev_games",
+       "gain_share": 0.024836475589519357
+      },
+      {
+       "feature": "r10_core_saves",
+       "gain_share": 0.022159125276357782
+      }
+     ]
+    }
+   }
+  }
+ },
+ "frame_rows": 4752
+}

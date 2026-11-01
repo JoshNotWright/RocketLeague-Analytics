@@ -9,6 +9,19 @@ The original review, including good ideas, bugs, and false assumptions, is in
 [docs/METHODOLOGY.md](docs/METHODOLOGY.md).
 See [docs/VALIDATION.md](docs/VALIDATION.md) for the checks performed and their limits.
 
+**v2 (replay parsing):** the `rlreplay` package parses raw `.replay` files from the
+public GC+ replay dataset, computes per-player-game frame features, and tests whether they
+predict outcomes better than ballchasing's summary stats under a strict time split. See
+[docs/V2_METHODOLOGY.md](docs/V2_METHODOLOGY.md) for the design and
+[docs/V2_RESULTS.md](docs/V2_RESULTS.md) for the numbers. It needs no ballchasing key:
+replays come one file at a time from Kaggle's public per-file endpoint, and parsing uses
+the `rrrocket` binary (nickbabcock) placed in `tools/`. Its extra dependencies are listed
+in `requirements-v2.txt`.
+
+Security note: a ballchasing API token was committed in the 2023 version of this repository
+and is still present in the published Git history. It must be revoked and reissued through
+ballchasing; nothing in this repository reads it.
+
 ## Install and verify
 
 Python 3.10+ is required. The pinned verification environment uses Python 3.12

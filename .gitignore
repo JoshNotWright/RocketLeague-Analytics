@@ -17,3 +17,7 @@ demo-output/
 credentials*.json
 service-account*.json
 player_cache.pkl
+.venv-*/
+tools/
+*.part
+reports/**/model_table.parquet

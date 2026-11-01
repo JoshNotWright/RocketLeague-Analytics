@@ -14,4 +14,4 @@ dependencies = ["numpy>=1.26,<3"]
 rlanalytics = "rlanalytics.cli:main"
 
 [tool.setuptools.packages.find]
-include = ["rlanalytics*"]
+include = ["rlanalytics*", "rlreplay*"]

@@ -1,0 +1,111 @@
+# v2: replay parsing and the frame-feature experiment
+
+This document describes the `rlreplay` package (branch `v2-replay-features`): where the
+data comes from, what is computed from replays, how the models are evaluated, and what the
+results do and do not mean. Numbers are in [V2_RESULTS.md](V2_RESULTS.md).
+
+## Question
+
+Do frame-level features parsed from replays predict a player's outcomes better than the
+summary statistics ballchasing already publishes, once rank and recent history are known?
+
+## Data
+
+**Source.** Rolv-Arild's "High-Level Rocket League Replay Dataset" on Kaggle: 140,328 GC+
+matches with raw `.replay` files and a line-delimited `metadata.json` per mode. Each
+metadata line is the full ballchasing replay record (per-player core, boost, movement,
+positioning and demo stats, plus each player's rank at the time). Files are fetched one at a
+time through Kaggle's public per-file endpoint; the full 160 GB archive is never downloaded.
+
+**Scope.** Ranked doubles only (`playlist_id == "ranked-doubles"`; 97% of the 2v2 folder).
+3v3 in this dataset is almost entirely private scrims and 1v1 mixes ranked and private play.
+
+**Selection bias (keep in every write-up).** Uploads to ballchasing are self-selected, and
+this dataset is further curated toward the highest-scoring players. Ranks are compressed
+at the top: roughly 60% of player-games are Supersonic Legend and 30% carry no rank at all.
+Nothing here says anything about Diamond or Champion ladders.
+
+## Units and keys
+
+One row per **player-game**. Key: `(replay_id, player_id)` with
+`player_id = "<platform>:<id>"` as ballchasing names platforms (`steam`, `epic`, `ps4`,
+`xbox`). Frame rows carry the same key, built from the replay's `UniqueId` attribute.
+
+## Frame features (v1, fixed before the parse run)
+
+Extracted by `rlreplay/frames.py` from rrrocket's network stream, accumulated only while
+the game state is `Active` (no countdowns, no goal replays). All are per player-game:
+
+| Feature | Definition |
+| --- | --- |
+| `avg_speed`, `supersonic_frac` | mean car speed; share of time at 2200 uu/s or more |
+| `ground_frac` | share of time with car z at or below 50 uu |
+| `avg_boost`, `low_boost_frac`, `zero_boost_frac` | mean boost; share of time below 20; share at 0 |
+| `behind_ball_frac` | share of time between the ball and own goal (y axis, team-signed) |
+| `avg_dist_ball`, `avg_dist_mate` | mean distance to ball; to nearest teammate |
+| `last_man_frac`, `last_man_low_boost_frac` | share of time as the team's deepest car; same with boost below 20 |
+| `commit_dist_mate` | mean distance to nearest teammate at the moment of this player's touches |
+| `touch_rate` | ball touches per active minute. A touch is a ball velocity change above 500 uu/s with this car the nearest within 350 uu |
+| `challenge_rate`, `challenge_win_rate` | touches with an opponent within 800 uu of the ball; share after which the ball moves toward the opponent half one second later |
+| `kickoffs`, `kickoff_time_to_ball`, `kickoff_win_rate` | first touches of a round; seconds from `Active` to that touch; share where the ball heads to the opponent half one second later |
+| `demos_inflicted`, `demos_taken` | from the demolish attribute (attacker and victim cars) |
+| `big_pads`, `small_pads` | inferred from boost jumps (the pickup attribute no longer names the collecting car); a jump to 100 from below 88 is a big pad |
+
+The touch, challenge and kickoff definitions are heuristics chosen in advance and not
+tuned to the outcome. They were sanity-checked on real replays (kickoff count equals round
+count; pad counts match ballchasing's order of magnitude; speeds within physical limits).
+
+## Modelling table
+
+For every player-game at time *t*, features use only that player's games strictly before
+*t*:
+
+- **rank**: own rank points (4 divisions per tier, SSL above GC3 div 4), team and opponent
+  mean rank, their difference.
+- **history**: games seen so far, days since previous game, running win rate, rolling
+  10-game mean of win and goal differential.
+- **summary**: rolling 10-game means of every ballchasing stat column (79 columns).
+- **frame**: rolling 10-game means of the frame features above.
+
+Targets:
+
+- `won`: did this player's team win this game. Primary.
+- `rank_change`: rank points at the player's first game 30 or more days later minus now.
+  Secondary; in this population it is zero 85% of the time.
+
+The dataset's own per-match `score` is computed from the whole collection and is never
+used as a feature.
+
+## Evaluation
+
+Strict time split by `played_at`: fit before `train_end`, early-stop on
+`[train_end, valid_end)`, score once on `>= valid_end`. Random splits across a player's games
+are never used. All feature sets are fitted on identical rows (players with at least 5
+prior games and known own and opponent rank). Models are LightGBM with fixed, untuned
+hyperparameters and a fixed seed; the comparison is between feature sets, not models.
+
+Two experiments:
+
+1. **All games.** Rank, history and summary sets on every ranked-doubles player-game. This
+   measures how much summary stats add over rank and history with ample data.
+2. **Frame subset.** Rows whose previous 10 games include at least 5 with frame features,
+   which restricts to the focal players whose replays were downloaded. All five sets are
+   compared on these rows, so the frame set's lift is read against the summary set on the
+   same rows.
+
+Metrics: log loss (primary), AUC, Brier, accuracy for `won`; MAE, RMSE, R² for `rank_change`.
+A constant-prior model is always reported.
+
+## Reproducing
+
+```powershell
+.\.venv\Scripts\python -m rlreplay fetch-meta --mode 2v2 --out data/meta
+.\.venv\Scripts\python -m rlreplay meta-table --meta data/meta/2v2.metadata.json --out data/features/player_game_2v2.parquet
+.\.venv\Scripts\python -m rlreplay select --table data/features/player_game_2v2.parquet --n-players 120 --max-replays 2500 --out data/subset_2v2.json
+.\.venv\Scripts\python -m rlreplay download --subset data/subset_2v2.json --mode 2v2 --raw data/raw/2v2
+.\.venv\Scripts\python -m rlreplay extract --raw data/raw/2v2 --out data/features/frame_2v2.parquet
+.\.venv\Scripts\python -m rlreplay experiment --table data/features/player_game_2v2.parquet --frames data/features/frame_2v2.parquet --out reports/v2 --train-end 2025-01-01 --valid-end 2025-07-01
+```
+
+`rrrocket` (nickbabcock, v0.11.8) must be in `tools/` or on `PATH`. No ballchasing key is
+needed for any of this.

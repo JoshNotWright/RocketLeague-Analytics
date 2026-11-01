@@ -1,14 +1,18 @@
-import csv
-import os
+"""Retired legacy workflow. See the explicit rlanalytics CLI and README.
 
-def get_match_id(csv_path):
-    csv_path = os.path.join("replays", csv_path)
-    with open(csv_path, 'r') as f:
-        reader = csv.DictReader(f, delimiter=';')
-        rows = list(reader)  # convert reader to a list
-        player_ids = [row['player id'][:2] for row in rows]
-        top_player_id = player_ids[0]
-        score_sum = sum([int(row['score']) for row in rows])
-        match_id = ''.join(player_ids) + str(score_sum)
-        return match_id
+Legacy formulas, mutable text-file pipelines, scraping, spreadsheet updates,
+credential literals, pickle caches, and destructive cleanup are not executed.
+Old function-level APIs have intentionally been removed.
+"""
 
+def main():
+    import sys
+    print(
+        "This legacy workflow is retired. Use python -m rlanalytics --help "
+        "for explicit import, report, and analysis commands. No action was taken.",
+        file=sys.stderr,
+    )
+    return 2
+
+if __name__ == "__main__":
+    raise SystemExit(main())

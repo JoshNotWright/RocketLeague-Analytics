@@ -1,31 +1,18 @@
-def remove_friends():
-    
-    # List of names to remove
-    names_to_remove = [
-        "PastorKurt",
-        "PastorCamerius",
-        "PastorRipper",
-        # Add more names here if needed
-    ]
+"""Retired legacy workflow. See the explicit rlanalytics CLI and README.
 
-    # File paths
-    file_paths = [
-        "player_offensive_war.txt",
-        "player_defensive_war.txt",
-        "player_offensive_stats.txt",
-        "player_defensive_stats.txt",
-        "player_war.txt",
-    ]
+Legacy formulas, mutable text-file pipelines, scraping, spreadsheet updates,
+credential literals, pickle caches, and destructive cleanup are not executed.
+Old function-level APIs have intentionally been removed.
+"""
 
-    # Iterate over each file
-    for file_path in file_paths:
-        with open(file_path, "r") as file:
-            # Read the content of the file
-            lines = file.readlines()
+def main():
+    import sys
+    print(
+        "This legacy workflow is retired. Use python -m rlanalytics --help "
+        "for explicit import, report, and analysis commands. No action was taken.",
+        file=sys.stderr,
+    )
+    return 2
 
-        # Remove lines with specified names
-        filtered_lines = [line for line in lines if not any(name in line for name in names_to_remove)]
-
-        with open(file_path, "w") as file:
-            # Write the filtered content back to the file
-            file.writelines(filtered_lines)
+if __name__ == "__main__":
+    raise SystemExit(main())

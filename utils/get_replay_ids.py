@@ -1,44 +1,18 @@
-import requests
-import json
-import time
+"""Retired legacy workflow. See the explicit rlanalytics CLI and README.
 
-def get_replay_ids(player_name, playlist, count):
+Legacy formulas, mutable text-file pipelines, scraping, spreadsheet updates,
+credential literals, pickle caches, and destructive cleanup are not executed.
+Old function-level APIs have intentionally been removed.
+"""
 
-    url = "https://ballchasing.com/api/replays"
+def main():
+    import sys
+    print(
+        "This legacy workflow is retired. Use python -m rlanalytics --help "
+        "for explicit import, report, and analysis commands. No action was taken.",
+        file=sys.stderr,
+    )
+    return 2
 
-    # Query parameters
-    params = {
-        "player-name": player_name,
-        "playlist": playlist,
-        "count": count,
-        "season": "f10",
-        "sort-by": "replay-date"
-    }
-
-    # Headers
-    headers = {
-        "Authorization": "XEw4Q7oHqauAV47tU0eiwRzq6JSBqyOJB4aKb1zA"
-    }
-
-    # Make the request
-    response = requests.get(url, params=params, headers=headers)
-
-    # Check if the request was successful
-    if response.status_code == 200:
-        # Convert response to JSON format
-        response_json = json.loads(response.text)
-
-        # Get replay IDs
-        replay_ids = [replay["id"] for replay in response_json["list"]]
-
-        # Print the replay IDs
-        return replay_ids
-    elif response.status_code == 429:
-        # If we get a 429 error, wait for a specified amount of time before retrying the request
-        retry_after = int(response.headers.get("Retry-After"))
-        print(f"Error {response.status_code}: {response.text}. Retrying in {retry_after} seconds...")
-        time.sleep(retry_after)
-        return get_replay_ids(player_name, playlist, count)
-    else:
-        # Print the error status code and message
-        print(f"Error {response.status_code}: {response.text}")
+if __name__ == "__main__":
+    raise SystemExit(main())

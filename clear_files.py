@@ -1,21 +1,18 @@
-import os
+"""Retired legacy workflow. See the explicit rlanalytics CLI and README.
 
-def clear_files(clear_teams, clear_replays):
-    if clear_teams:
-        file_names = ["player_war.txt", "player_defensive_stats.txt", "player_offensive_stats.txt", "player_defensive_war.txt", "player_offensive_war.txt", "team_stats.txt", "unique_teams.txt"]
-    else:
-        file_names = ["player_war.txt", "player_defensive_stats.txt", "player_offensive_stats.txt", "player_defensive_war.txt", "player_offensive_war.txt", "team_stats.txt"]
-    
-    for file_name in file_names:
-        with open(file_name, "w") as f:
-            f.truncate(0)
-    
-    print("Files cleared successfully.")
+Legacy formulas, mutable text-file pipelines, scraping, spreadsheet updates,
+credential literals, pickle caches, and destructive cleanup are not executed.
+Old function-level APIs have intentionally been removed.
+"""
 
-    if clear_replays:
-        # Remove the "replays" directory
-        if os.path.exists("replays"):
-            os.system("rmdir /s /q replays")
-            print("Replays cleared successfully")
+def main():
+    import sys
+    print(
+        "This legacy workflow is retired. Use python -m rlanalytics --help "
+        "for explicit import, report, and analysis commands. No action was taken.",
+        file=sys.stderr,
+    )
+    return 2
 
-clear_files(True, True)
+if __name__ == "__main__":
+    raise SystemExit(main())

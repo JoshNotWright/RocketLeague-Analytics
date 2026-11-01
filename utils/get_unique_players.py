@@ -1,16 +1,18 @@
-import os
-import csv
+"""Retired legacy workflow. See the explicit rlanalytics CLI and README.
 
-def get_unique_players():
-    player_set = set()
+Legacy formulas, mutable text-file pipelines, scraping, spreadsheet updates,
+credential literals, pickle caches, and destructive cleanup are not executed.
+Old function-level APIs have intentionally been removed.
+"""
 
-    for file_name in os.listdir('ranked-replays'):
-        if file_name.endswith('.csv'):
-            with open(os.path.join('ranked-replays', file_name), newline='') as csvfile:
-                reader = csv.reader(csvfile, delimiter=';', quotechar='|')
-                next(reader)  # skip header row
-                for row in reader:
-                    player_set.add(row[2])
+def main():
+    import sys
+    print(
+        "This legacy workflow is retired. Use python -m rlanalytics --help "
+        "for explicit import, report, and analysis commands. No action was taken.",
+        file=sys.stderr,
+    )
+    return 2
 
-    player_list = sorted(list(player_set))
-    return player_list
+if __name__ == "__main__":
+    raise SystemExit(main())

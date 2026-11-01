@@ -311,6 +311,13 @@ def cmd_score(args):
     print(report["markdown"])
 
 
+def cmd_card(args):
+    from .card import write_card
+    result = write_card(Path(args.report), args.player, Path(args.out or args.report),
+                        reference_dir=Path(args.reference) if args.reference else None)
+    print(f"{result['player']}: {result['svg']} and {result['html']}")
+
+
 def cmd_crawl(args):
     from .crawl import main_from_args
     return main_from_args(args)
@@ -428,6 +435,12 @@ def main(argv=None):
     p.add_argument("--workers", type=int, default=None); p.add_argument("--limit", type=int, default=0)
     p.add_argument("--focus", default=None, help="player name or id to list first")
     p.set_defaults(func=cmd_score)
+    p = sub.add_parser("card", help="render a player's percentile card (SVG + HTML) from a score report")
+    p.add_argument("--report", required=True, help="folder written by `score` (report.json, player_game.parquet)")
+    p.add_argument("--player", required=True, help="player name or id"); p.add_argument("--out", default=None)
+    p.add_argument("--reference", default=None, help="reference directory (default rlreplay/reference)")
+    p.set_defaults(func=cmd_card)
+
     p = sub.add_parser("crawl", help="crawl ballchasing.com replays at chosen ranks (needs BALLCHASING_API_KEY)")
     from .crawl import add_arguments as _crawl_arguments
     _crawl_arguments(p)

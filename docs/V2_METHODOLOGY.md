@@ -184,6 +184,16 @@ or comma-separate), so one fit covers every band, with each match's mean rank as
 games whose mean rank falls in that band; `score --reference rlreplay/reference` then compares
 each player with the band they actually played in.
 
+### Player cards
+
+`python -m rlreplay card --report reports/<scored folder> --player <name>` renders a percentile
+card from a `score` report: `card_<player>.svg` (standalone image, light and dark via
+prefers-color-scheme) and `card_<player>.html` (the same SVG with hover detail per bar). Bars are
+percentiles against the reference population the player was scored against, shown in the good
+direction for lower-is-better metrics; bar opacity follows the metric's split-half reliability,
+which `build-reference` now stores per metric, so finishing luck is visibly quieter than movement.
+A trend strip shows xG, value added and goals above xG by year. Code: `rlreplay/card.py`.
+
 To pull one player's own uploads instead of a rank band (for scoring your own games), filter
 by player id and clear the rank bounds (`--min-rank=` rather than `--min-rank ""`, because
 PowerShell drops empty quoted arguments), for example:

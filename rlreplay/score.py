@@ -135,6 +135,11 @@ def build_reference(player_game_xg: pl.DataFrame, player_game_value: pl.DataFram
                     priors.unique(subset=["statistic"]).select("statistic", "population_mean", "between_var", "within_var_pooled").iter_rows(named=True)}
     reference = {"min_games": min_games, "players": means.height, "games": game.height, "metrics": {},
                  "band": band, "rank_points": list(band_range(band)) if band else None}
+    # Split-half reliability per metric over the same players: how much of a per-player mean is
+    # a trait rather than noise. Cards fade the bars of metrics that do not persist.
+    eligible = game.filter(pl.col("player_id").is_in(means["player_id"].implode()))
+    if "played_at" not in eligible.columns:
+        eligible = eligible.with_columns(pl.lit(0).alias("played_at"))
     for name, col, higher in METRICS:
         if col not in means.columns:
             continue
@@ -142,7 +147,12 @@ def build_reference(player_game_xg: pl.DataFrame, player_game_value: pl.DataFram
         if len(values) == 0:
             continue
         prior = prior_by_col.get(col, {})
+        try:
+            reliability = xg_mod.split_half(eligible.filter(pl.col(col).is_not_null()), col, min_games=min_games)["split_half_corr"]
+        except Exception:  # noqa: BLE001 - a metric with too few rows simply has no reliability figure
+            reliability = None
         reference["metrics"][name] = {"higher_is_better": higher, "mean": float(values.mean()),
+                                      "reliability": None if reliability is None or reliability != reliability else float(reliability),
                                       "quantiles": {str(q): float(np.quantile(values, q)) for q in QUANTILES},
                                       "sorted": [float(v) for v in np.sort(values)],
                                       "prior": {"mean": prior.get("population_mean"), "between_var": prior.get("between_var"),

@@ -120,6 +120,26 @@ under the same handling rules as the other two keys.
 7. Stay inside ballchasing's GC tier limits and terms; at scale, email the ballchasing
    author about the project.
 
+## Setup flow (once)
+
+1. Lab: install Tailscale, create the folder tree, bind sshd to the tailnet, place
+   `lab_validate.py`. The lab runs nothing else.
+2. Operator PC: user-level `BALLCHASING_API_KEY`, `HCLOUD_TOKEN`, `TS_AUTHKEY`; install
+   `hcloud` and `rclone`.
+3. `crawler_image.sh` builds the snapshot (throwaway server -> install -> snapshot -> delete).
+4. Smoke test: `crawler_up.sh` with one small window, watch one batch push and validate,
+   confirm the lab has the npz and the box dropped its raws, `crawler_down.sh`, confirm
+   the server is gone and a second `up` refetches nothing.
+5. Real run with the full window list.
+
+## Training from the operator PC
+
+Models train on tables, not frames. Build touches, player-game and decision-point tables
+on the lab (same `rlreplay` commands, over SSH, partitioned by band and month), sync only
+those with rclone before a refit, and read parquet over the tailnet with DuckDB/polars for
+exploration. Pull decoded arrays locally only to prototype a new feature on one band and
+month; run the real extraction on the lab.
+
 ## Done looks like
 
 - `crawler_up.sh` on a clean account produces a crawling server in under five minutes

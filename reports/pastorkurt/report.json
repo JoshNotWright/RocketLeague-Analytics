@@ -1,0 +1,654 @@
+{
+ "replays": 2,
+ "failures": {},
+ "players": [
+  {
+   "player_id": "xbox:2533274871805586",
+   "name": "Ryebread904473",
+   "games": 1,
+   "win_rate": 0.0,
+   "metrics": {
+    "touches": {
+     "raw": 67.0,
+     "shrunk": 52.24510824814418,
+     "shrink_factor": 0.036920518485419475,
+     "gc_percentile": 56.86274509803921,
+     "gc_median": 51.50555555555556
+    },
+    "shots": {
+     "raw": 3.0,
+     "shrunk": 4.654915629595491,
+     "shrink_factor": 0.04260780437895185,
+     "gc_percentile": 47.05882352941176,
+     "gc_median": 4.694160997732427
+    },
+    "xg": {
+     "raw": 0.31711054509588443,
+     "shrunk": 1.4062595029004852,
+     "shrink_factor": 0.03215478985901083,
+     "gc_percentile": 46.07843137254902,
+     "gc_median": 1.4220657315510272
+    },
+    "goals": {
+     "raw": 0.0,
+     "shrunk": 1.4175626019693328,
+     "shrink_factor": 0.0225106565290034,
+     "gc_percentile": 49.01960784313725,
+     "gc_median": 1.437426210153483
+    },
+    "goals_above_xg": {
+     "raw": -0.31711054509588443,
+     "shrunk": 0.0060807612091758724,
+     "shrink_factor": 0.005179219150286732,
+     "gc_percentile": 45.09803921568628,
+     "gc_median": 0.014590628050166865
+    },
+    "mean_threat": {
+     "raw": 0.1052560201492428,
+     "shrunk": 0.1241811294378753,
+     "shrink_factor": 0.04976135891403892,
+     "gc_percentile": 44.11764705882353,
+     "gc_median": 0.12552926861762587
+    },
+    "value_added": {
+     "raw": -4.019229896210066,
+     "shrunk": -0.019510634899515364,
+     "shrink_factor": 0.013636494741788125,
+     "gc_percentile": 39.21568627450981,
+     "gc_median": 0.04758157015459598
+    },
+    "shots_faced": {
+     "raw": 3.0,
+     "shrunk": 3.5355996649045305,
+     "shrink_factor": 0.013388650664033521,
+     "gc_percentile": 43.13725490196079,
+     "gc_median": 3.6
+    },
+    "gsax": {
+     "raw": 0.3661020606601826,
+     "shrunk": -0.1352012250704098,
+     "shrink_factor": 0.00330701552806752,
+     "gc_percentile": 51.9607843137255,
+     "gc_median": -0.14225029653769872
+    },
+    "avg_speed": {
+     "raw": 1320.5293150953064,
+     "shrunk": 1512.7526415289667,
+     "shrink_factor": 0.24513522996680276,
+     "gc_percentile": 8.823529411764707,
+     "gc_median": 1578.0070321079515
+    },
+    "supersonic_frac": {
+     "raw": 0.043223255510925845,
+     "shrunk": 0.13570177753005006,
+     "shrink_factor": 0.38653094764653906,
+     "gc_percentile": 1.9607843137254901,
+     "gc_median": 0.19882592751510053
+    },
+    "avg_boost": {
+     "raw": 68.45058702933181,
+     "shrunk": 53.19643869072979,
+     "shrink_factor": 0.23107512573723918,
+     "gc_percentile": 90.19607843137256,
+     "gc_median": 48.88121485638402
+    },
+    "low_boost_frac": {
+     "raw": 0.08950855999519722,
+     "shrunk": 0.25474049360165113,
+     "shrink_factor": 0.2044596248035367,
+     "gc_percentile": 12.745098039215685,
+     "gc_median": 0.29481565344241806
+    },
+    "behind_ball_frac": {
+     "raw": 0.7490446633588016,
+     "shrunk": 0.743734165066028,
+     "shrink_factor": 0.09217060237579279,
+     "gc_percentile": 45.09803921568628,
+     "gc_median": 0.745279116904275
+    },
+    "avg_dist_mate": {
+     "raw": 3341.463411970436,
+     "shrunk": 3017.3541823353044,
+     "shrink_factor": 0.11148565423717337,
+     "gc_percentile": 71.56862745098039,
+     "gc_median": 2976.259241766492
+    },
+    "last_man_low_boost_frac": {
+     "raw": 0.029972285735276147,
+     "shrunk": 0.10037636989499202,
+     "shrink_factor": 0.13468129310831203,
+     "gc_percentile": 26.47058823529412,
+     "gc_median": 0.11092121190958573
+    },
+    "challenge_win_rate": {
+     "raw": 0.5,
+     "shrunk": 0.5406026675134339,
+     "shrink_factor": 0.008345087077174468,
+     "gc_percentile": 48.03921568627451,
+     "gc_median": 0.5420195389356806
+    },
+    "kickoff_time_to_ball": {
+     "raw": 2.134590000000003,
+     "shrunk": 2.007993010249853,
+     "shrink_factor": 0.018354753433335837,
+     "gc_percentile": 57.84313725490197,
+     "gc_median": 2.0044179988311006
+    },
+    "demos_inflicted": {
+     "raw": 0.0,
+     "shrunk": 0.9536034785732362,
+     "shrink_factor": 0.061287342879264274,
+     "gc_percentile": 47.05882352941176,
+     "gc_median": 1.0
+    },
+    "demos_taken": {
+     "raw": 1.0,
+     "shrunk": 0.9688572325029737,
+     "shrink_factor": 0.006558223980400738,
+     "gc_percentile": 49.01960784313725,
+     "gc_median": 0.9733285917496444
+    },
+    "big_pads": {
+     "raw": 12.0,
+     "shrunk": 17.630183827532697,
+     "shrink_factor": 0.15300384207859583,
+     "gc_percentile": 32.35294117647059,
+     "gc_median": 19.398860021208908
+    },
+    "small_pads": {
+     "raw": 101.0,
+     "shrunk": 63.269966597454214,
+     "shrink_factor": 0.10797623772518299,
+     "gc_percentile": 77.45098039215686,
+     "gc_median": 57.66269841269842
+    }
+   }
+  },
+  {
+   "player_id": "xbox:2535412497040119",
+   "name": "he2shady",
+   "games": 1,
+   "win_rate": 0.0,
+   "metrics": {
+    "touches": {
+     "raw": 101.0,
+     "shrunk": 53.500405876648436,
+     "shrink_factor": 0.036920518485419475,
+     "gc_percentile": 69.6078431372549,
+     "gc_median": 51.50555555555556
+    },
+    "shots": {
+     "raw": 9.0,
+     "shrunk": 4.9105624558692025,
+     "shrink_factor": 0.04260780437895185,
+     "gc_percentile": 62.745098039215684,
+     "gc_median": 4.694160997732427
+    },
+    "xg": {
+     "raw": 0.7092266733655197,
+     "shrunk": 1.4188679146053242,
+     "shrink_factor": 0.03215478985901083,
+     "gc_percentile": 50.0,
+     "gc_median": 1.4220657315510272
+    },
+    "goals": {
+     "raw": 2.0,
+     "shrunk": 1.4625839150273396,
+     "shrink_factor": 0.0225106565290034,
+     "gc_percentile": 52.94117647058824,
+     "gc_median": 1.437426210153483
+    },
+    "goals_above_xg": {
+     "raw": 1.2907733266344803,
+     "shrunk": 0.014408344149078954,
+     "shrink_factor": 0.005179219150286732,
+     "gc_percentile": 49.01960784313725,
+     "gc_median": 0.014590628050166865
+    },
+    "mean_threat": {
+     "raw": 0.12716920056569633,
+     "shrunk": 0.12527155907352652,
+     "shrink_factor": 0.04976135891403892,
+     "gc_percentile": 47.05882352941176,
+     "gc_median": 0.12552926861762587
+    },
+    "value_added": {
+     "raw": 0.181841521347671,
+     "shrunk": 0.03777725339588711,
+     "shrink_factor": 0.013636494741788125,
+     "gc_percentile": 49.01960784313725,
+     "gc_median": 0.04758157015459598
+    },
+    "shots_faced": {
+     "raw": 2.0,
+     "shrunk": 3.522211014240497,
+     "shrink_factor": 0.013388650664033521,
+     "gc_percentile": 42.15686274509804,
+     "gc_median": 3.6
+    },
+    "gsax": {
+     "raw": -0.5158639037264697,
+     "shrunk": -0.1381179002098635,
+     "shrink_factor": 0.00330701552806752,
+     "gc_percentile": 50.98039215686274,
+     "gc_median": -0.14225029653769872
+    },
+    "avg_speed": {
+     "raw": 1634.0900957289687,
+     "shrunk": 1589.6174355981695,
+     "shrink_factor": 0.24513522996680276,
+     "gc_percentile": 59.80392156862745,
+     "gc_median": 1578.0070321079515
+    },
+    "supersonic_frac": {
+     "raw": 0.19708246774685934,
+     "shrunk": 0.1951731246397554,
+     "shrink_factor": 0.38653094764653906,
+     "gc_percentile": 45.09803921568628,
+     "gc_median": 0.19882592751510053
+    },
+    "avg_boost": {
+     "raw": 58.49220240721773,
+     "shrunk": 50.895303712034995,
+     "shrink_factor": 0.23107512573723918,
+     "gc_percentile": 73.52941176470588,
+     "gc_median": 48.88121485638402
+    },
+    "low_boost_frac": {
+     "raw": 0.21333445633335976,
+     "shrunk": 0.28005788990791347,
+     "shrink_factor": 0.2044596248035367,
+     "gc_percentile": 31.372549019607842,
+     "gc_median": 0.29481565344241806
+    },
+    "behind_ball_frac": {
+     "raw": 0.7112167586052692,
+     "shrunk": 0.7402475442982808,
+     "shrink_factor": 0.09217060237579279,
+     "gc_percentile": 41.17647058823529,
+     "gc_median": 0.745279116904275
+    },
+    "avg_dist_mate": {
+     "raw": 3341.463411970436,
+     "shrunk": 3017.3541823353044,
+     "shrink_factor": 0.11148565423717337,
+     "gc_percentile": 71.56862745098039,
+     "gc_median": 2976.259241766492
+    },
+    "last_man_low_boost_frac": {
+     "raw": 0.061463805287590975,
+     "shrunk": 0.10461768847024347,
+     "shrink_factor": 0.13468129310831203,
+     "gc_percentile": 31.372549019607842,
+     "gc_median": 0.11092121190958573
+    },
+    "challenge_win_rate": {
+     "raw": 0.47368421052631576,
+     "shrunk": 0.5403830599587715,
+     "shrink_factor": 0.008345087077174468,
+     "gc_percentile": 48.03921568627451,
+     "gc_median": 0.5420195389356806
+    },
+    "kickoff_time_to_ball": {
+     "raw": 2.189399999999978,
+     "shrunk": 2.0089990342855337,
+     "shrink_factor": 0.018354753433335837,
+     "gc_percentile": 58.82352941176471,
+     "gc_median": 2.0044179988311006
+    },
+    "demos_inflicted": {
+     "raw": 3.0,
+     "shrunk": 1.1374655072110291,
+     "shrink_factor": 0.061287342879264274,
+     "gc_percentile": 66.66666666666666,
+     "gc_median": 1.0
+    },
+    "demos_taken": {
+     "raw": 1.0,
+     "shrunk": 0.9688572325029737,
+     "shrink_factor": 0.006558223980400738,
+     "gc_percentile": 49.01960784313725,
+     "gc_median": 0.9733285917496444
+    },
+    "big_pads": {
+     "raw": 54.0,
+     "shrunk": 24.056345194833725,
+     "shrink_factor": 0.15300384207859583,
+     "gc_percentile": 100.0,
+     "gc_median": 19.398860021208908
+    },
+    "small_pads": {
+     "raw": 87.0,
+     "shrunk": 61.75829926930165,
+     "shrink_factor": 0.10797623772518299,
+     "gc_percentile": 73.52941176470588,
+     "gc_median": 57.66269841269842
+    }
+   }
+  },
+  {
+   "player_id": "epic:d216ec8f8570435389cccd7f10ba5f23",
+   "name": "PastorCamerius",
+   "games": 1,
+   "win_rate": 1.0,
+   "metrics": {
+    "touches": {
+     "raw": 54.0,
+     "shrunk": 51.765141507833725,
+     "shrink_factor": 0.036920518485419475,
+     "gc_percentile": 53.92156862745098,
+     "gc_median": 51.50555555555556
+    },
+    "shots": {
+     "raw": 5.0,
+     "shrunk": 4.740131238353396,
+     "shrink_factor": 0.04260780437895185,
+     "gc_percentile": 54.90196078431373,
+     "gc_median": 4.694160997732427
+    },
+    "xg": {
+     "raw": 1.1687569644791729,
+     "shrunk": 1.4336440145499338,
+     "shrink_factor": 0.03215478985901083,
+     "gc_percentile": 52.94117647058824,
+     "gc_median": 1.4220657315510272
+    },
+    "goals": {
+     "raw": 1.0,
+     "shrunk": 1.4400732584983362,
+     "shrink_factor": 0.0225106565290034,
+     "gc_percentile": 50.0,
+     "gc_median": 1.437426210153483
+    },
+    "goals_above_xg": {
+     "raw": -0.16875696447917288,
+     "shrunk": 0.006849116914919551,
+     "shrink_factor": 0.005179219150286732,
+     "gc_percentile": 45.09803921568628,
+     "gc_median": 0.014590628050166865
+    },
+    "mean_threat": {
+     "raw": 0.11558665754797692,
+     "shrunk": 0.1246951959932845,
+     "shrink_factor": 0.04976135891403892,
+     "gc_percentile": 44.11764705882353,
+     "gc_median": 0.12552926861762587
+    },
+    "value_added": {
+     "raw": -1.359029941595775,
+     "shrunk": 0.016765167793687436,
+     "shrink_factor": 0.013636494741788125,
+     "gc_percentile": 44.11764705882353,
+     "gc_median": 0.04758157015459598
+    },
+    "shots_faced": {
+     "raw": 4.0,
+     "shrunk": 3.548988315568564,
+     "shrink_factor": 0.013388650664033521,
+     "gc_percentile": 45.09803921568628,
+     "gc_median": 3.6
+    },
+    "gsax": {
+     "raw": -1.585636560300587,
+     "shrunk": -0.14165565499665614,
+     "shrink_factor": 0.00330701552806752,
+     "gc_percentile": 50.0,
+     "gc_median": -0.14225029653769872
+    },
+    "avg_speed": {
+     "raw": 1430.9860223641133,
+     "shrunk": 1539.8294718666814,
+     "shrink_factor": 0.24513522996680276,
+     "gc_percentile": 18.627450980392158,
+     "gc_median": 1578.0070321079515
+    },
+    "supersonic_frac": {
+     "raw": 0.1312231224248431,
+     "shrunk": 0.1697164494810558,
+     "shrink_factor": 0.38653094764653906,
+     "gc_percentile": 20.588235294117645,
+     "gc_median": 0.19882592751510053
+    },
+    "avg_boost": {
+     "raw": 42.09900376389073,
+     "shrunk": 47.107243274292664,
+     "shrink_factor": 0.23107512573723918,
+     "gc_percentile": 28.431372549019606,
+     "gc_median": 48.88121485638402
+    },
+    "low_boost_frac": {
+     "raw": 0.3791017150621526,
+     "shrunk": 0.31395060143231324,
+     "shrink_factor": 0.2044596248035367,
+     "gc_percentile": 74.50980392156863,
+     "gc_median": 0.29481565344241806
+    },
+    "behind_ball_frac": {
+     "raw": 0.6829720111397289,
+     "shrunk": 0.7376442089104297,
+     "shrink_factor": 0.09217060237579279,
+     "gc_percentile": 34.31372549019608,
+     "gc_median": 0.745279116904275
+    },
+    "avg_dist_mate": {
+     "raw": 3159.455946456689,
+     "shrunk": 2997.0629609664547,
+     "shrink_factor": 0.11148565423717337,
+     "gc_percentile": 60.78431372549019,
+     "gc_median": 2976.259241766492
+    },
+    "last_man_low_boost_frac": {
+     "raw": 0.17027854296902184,
+     "shrunk": 0.11927299805042035,
+     "shrink_factor": 0.13468129310831203,
+     "gc_percentile": 73.52941176470588,
+     "gc_median": 0.11092121190958573
+    },
+    "challenge_win_rate": {
+     "raw": 0.75,
+     "shrunk": 0.5426889392827275,
+     "shrink_factor": 0.008345087077174468,
+     "gc_percentile": 50.98039215686274,
+     "gc_median": 0.5420195389356806
+    },
+    "kickoff_time_to_ball": {
+     "raw": 2.4097299999999677,
+     "shrunk": 2.0130431371095003,
+     "shrink_factor": 0.018354753433335837,
+     "gc_percentile": 64.70588235294117,
+     "gc_median": 2.0044179988311006
+    },
+    "demos_inflicted": {
+     "raw": 0.0,
+     "shrunk": 0.9536034785732362,
+     "shrink_factor": 0.061287342879264274,
+     "gc_percentile": 47.05882352941176,
+     "gc_median": 1.0
+    },
+    "demos_taken": {
+     "raw": 2.0,
+     "shrunk": 0.9754154564833745,
+     "shrink_factor": 0.006558223980400738,
+     "gc_percentile": 55.88235294117647,
+     "gc_median": 0.9733285917496444
+    },
+    "big_pads": {
+     "raw": 36.0,
+     "shrunk": 21.302276037419,
+     "shrink_factor": 0.15300384207859583,
+     "gc_percentile": 80.3921568627451,
+     "gc_median": 19.398860021208908
+    },
+    "small_pads": {
+     "raw": 91.0,
+     "shrunk": 62.19020422020238,
+     "shrink_factor": 0.10797623772518299,
+     "gc_percentile": 74.50980392156863,
+     "gc_median": 57.66269841269842
+    }
+   }
+  },
+  {
+   "player_id": "epic:3a1659f2b97140a88b7607f35c4f60e1",
+   "name": "PastorKurt",
+   "games": 1,
+   "win_rate": 1.0,
+   "metrics": {
+    "touches": {
+     "raw": 88.0,
+     "shrunk": 53.020439136337984,
+     "shrink_factor": 0.036920518485419475,
+     "gc_percentile": 65.68627450980392,
+     "gc_median": 51.50555555555556
+    },
+    "shots": {
+     "raw": 3.0,
+     "shrunk": 4.654915629595491,
+     "shrink_factor": 0.04260780437895185,
+     "gc_percentile": 47.05882352941176,
+     "gc_median": 4.694160997732427
+    },
+    "xg": {
+     "raw": 1.1352211540042183,
+     "shrunk": 1.4325656776113602,
+     "shrink_factor": 0.03215478985901083,
+     "gc_percentile": 52.94117647058824,
+     "gc_median": 1.4220657315510272
+    },
+    "goals": {
+     "raw": 2.0,
+     "shrunk": 1.4625839150273396,
+     "shrink_factor": 0.0225106565290034,
+     "gc_percentile": 52.94117647058824,
+     "gc_median": 1.437426210153483
+    },
+    "goals_above_xg": {
+     "raw": 0.8647788459957817,
+     "shrunk": 0.012202025377038555,
+     "shrink_factor": 0.005179219150286732,
+     "gc_percentile": 47.05882352941176,
+     "gc_median": 0.014590628050166865
+    },
+    "mean_threat": {
+     "raw": 0.1073761934260346,
+     "shrunk": 0.12428663214126169,
+     "shrink_factor": 0.04976135891403892,
+     "gc_percentile": 44.11764705882353,
+     "gc_median": 0.12552926861762587
+    },
+    "value_added": {
+     "raw": 0.36968465931525885,
+     "shrunk": 0.040338775359063106,
+     "shrink_factor": 0.013636494741788125,
+     "gc_percentile": 50.0,
+     "gc_median": 0.04758157015459598
+    },
+    "shots_faced": {
+     "raw": 5.0,
+     "shrunk": 3.5623769662325975,
+     "shrink_factor": 0.013388650664033521,
+     "gc_percentile": 48.03921568627451,
+     "gc_median": 3.6
+    },
+    "gsax": {
+     "raw": 0.4167465365970793,
+     "shrunk": -0.13503374300207563,
+     "shrink_factor": 0.00330701552806752,
+     "gc_percentile": 51.9607843137255,
+     "gc_median": -0.14225029653769872
+    },
+    "avg_speed": {
+     "raw": 1544.0842861639087,
+     "shrunk": 1567.5538407720903,
+     "shrink_factor": 0.24513522996680276,
+     "gc_percentile": 34.31372549019608,
+     "gc_median": 1578.0070321079515
+    },
+    "supersonic_frac": {
+     "raw": 0.1093578409971856,
+     "shrunk": 0.16126484153026507,
+     "shrink_factor": 0.38653094764653906,
+     "gc_percentile": 12.745098039215685,
+     "gc_median": 0.19882592751510053
+    },
+    "avg_boost": {
+     "raw": 56.46560023953668,
+     "shrunk": 50.42700636131873,
+     "shrink_factor": 0.23107512573723918,
+     "gc_percentile": 67.64705882352942,
+     "gc_median": 48.88121485638402
+    },
+    "low_boost_frac": {
+     "raw": 0.20977008179993925,
+     "shrunk": 0.27932911922815107,
+     "shrink_factor": 0.2044596248035367,
+     "gc_percentile": 31.372549019607842,
+     "gc_median": 0.29481565344241806
+    },
+    "behind_ball_frac": {
+     "raw": 0.7910678664513509,
+     "shrunk": 0.7476074690088285,
+     "shrink_factor": 0.09217060237579279,
+     "gc_percentile": 59.80392156862745,
+     "gc_median": 0.745279116904275
+    },
+    "avg_dist_mate": {
+     "raw": 3159.455946456689,
+     "shrunk": 2997.0629609664547,
+     "shrink_factor": 0.11148565423717337,
+     "gc_percentile": 60.78431372549019,
+     "gc_median": 2976.259241766492
+    },
+    "last_man_low_boost_frac": {
+     "raw": 0.09083869413308435,
+     "shrunk": 0.10857393648486745,
+     "shrink_factor": 0.13468129310831203,
+     "gc_percentile": 43.13725490196079,
+     "gc_median": 0.11092121190958573
+    },
+    "challenge_win_rate": {
+     "raw": 0.6190476190476191,
+     "shrunk": 0.5415961302607166,
+     "shrink_factor": 0.008345087077174468,
+     "gc_percentile": 49.01960784313725,
+     "gc_median": 0.5420195389356806
+    },
+    "kickoff_time_to_ball": {
+     "raw": 2.070337333333329,
+     "shrunk": 2.006813668395752,
+     "shrink_factor": 0.018354753433335837,
+     "gc_percentile": 55.88235294117647,
+     "gc_median": 2.0044179988311006
+    },
+    "demos_inflicted": {
+     "raw": 2.0,
+     "shrunk": 1.0761781643317647,
+     "shrink_factor": 0.061287342879264274,
+     "gc_percentile": 61.76470588235294,
+     "gc_median": 1.0
+    },
+    "demos_taken": {
+     "raw": 1.0,
+     "shrunk": 0.9688572325029737,
+     "shrink_factor": 0.006558223980400738,
+     "gc_percentile": 49.01960784313725,
+     "gc_median": 0.9733285917496444
+    },
+    "big_pads": {
+     "raw": 29.0,
+     "shrunk": 20.23124914286883,
+     "shrink_factor": 0.15300384207859583,
+     "gc_percentile": 61.76470588235294,
+     "gc_median": 19.398860021208908
+    },
+    "small_pads": {
+     "raw": 92.0,
+     "shrunk": 62.298180457927565,
+     "shrink_factor": 0.10797623772518299,
+     "gc_percentile": 74.50980392156863,
+     "gc_median": 57.66269841269842
+    }
+   }
+  }
+ ]
+}

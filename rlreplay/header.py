@@ -28,7 +28,11 @@ def parse(path, *, network: bool = False, timeout: int = 300) -> dict:
     completed = subprocess.run(args, capture_output=True, timeout=timeout)
     if completed.returncode != 0:
         raise RuntimeError(f"rrrocket failed on {path}: {completed.stderr.decode(errors='replace')[:300]}")
-    return json.loads(completed.stdout)
+    try:
+        import orjson  # 3-5x faster than json on the ~10 MB network dump
+        return orjson.loads(completed.stdout)
+    except ImportError:
+        return json.loads(completed.stdout)
 
 
 def header_summary(replay_json: dict) -> dict:

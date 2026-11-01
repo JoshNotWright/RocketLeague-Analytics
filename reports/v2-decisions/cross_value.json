@@ -1,0 +1,18 @@
+{
+ "player_games": 3064,
+ "players": 75,
+ "game_level": {
+  "corr_loglik_value_added": 0.032655022924492814,
+  "corr_challenge_excess_value_added": 0.10112766870326487,
+  "corr_loglik_mean_threat": -0.06282635731087532
+ },
+ "player_level": {
+  "corr_loglik_value_added": -0.06647216481474129,
+  "corr_challenge_excess_value_added": 0.349358867635369,
+  "corr_loglik_xg": -0.3116209872132862
+ },
+ "reliability_value_added_these_games": {
+  "players": 76,
+  "split_half_corr": 0.45315346574545307
+ }
+}

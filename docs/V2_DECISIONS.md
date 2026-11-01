@@ -61,6 +61,70 @@ and the right follow-up is to cross decision similarity with value added (does d
 from the GC+ norm raise or lower the team's net threat?). That join is straightforward from
 `player_game_decisions.parquet` and `player_game_value.parquet` and is left for the next pass.
 
+## Second pass: 2.5 s horizon, decision points only
+
+The momentum problem above was addressed in two ways, both now cheap thanks to the decoded
+replay cache (`python -m rlreplay decode`, see V2_METHODOLOGY.md): the full 14.7M-row
+dataset rebuilds in 23 s.
+
+1. **Horizon 2.5 s** with a 1000 uu displacement threshold for retreat/advance.
+2. **Decision points only.** Each row carries the player's closing speed on the ball and a
+   `decision_point` flag that is false when the outcome is already decided by current motion
+   (time to ball under half the horizon, or already moving along the pitch fast enough to
+   cross the threshold). Fits use only decision points: 27% of frames, with a balanced label
+   mix (challenge 24%, retreat 23%, advance 21%, hold 25%, big pad 7%).
+
+**Tabular policy** (LightGBM, 3M-row sample of the 4.0M decision points, same date split,
+test on 765,563 rows, 1,513 rounds):
+
+| | log loss | accuracy |
+| --- | --- | --- |
+| class prior | 1.542 | 0.246 |
+| decision-point policy | 0.918 | 0.617 |
+
+Per-class recall: retreat 0.76, challenge 0.69, advance 0.63, hold 0.52, big pad 0.22. The
+top features are now position and context rather than own velocity: own y (0.13), ball
+velocity along the pitch, own boost, closing speed, distance to ball, whether the player is
+ahead of the ball and closer than their teammate, nearest opponent's distance to the ball,
+time since kickoff. That is what a decision model should look at.
+
+**The reliability result reverses.** On the 1 s continuation task, per-player decision
+log-likelihood had split-half reliability 0.52. On decision points it is **0.08**. The earlier
+"predictability is a stable trait" was a momentum artefact: players differ consistently in
+how they move, not in how predictable their choices are once motion is controlled for. Two
+things that do persist:
+
+| per-player statistic (held-out games, 76 players) | split-half reliability |
+| --- | --- |
+| challenge rate at decision points | 0.41 |
+| challenge rate minus the policy's expected rate | 0.30 |
+| decision log-likelihood | 0.08 |
+
+**Crossed with value added** (`reports/v2-decisions-h25/cross_value.json`, 3,064 held-out
+player-games, 75 players): decision log-likelihood is unrelated to value added (player-level
+r = −0.05) and to xG (−0.14); challenging more than the policy expects correlates weakly and
+positively with value added (+0.16 at player level, +0.08 per game). So at GC+ the signal is
+not "plays like the population" but "challenges more often than the population would in the
+same spots", and even that is a modest, noisy effect. Any stronger claim needs more than 76
+players.
+
+**Sequence model on the GPU** (`rlreplay/seqpolicy.py`, run in `.venv-torch` on the Radeon AI
+PRO R9700). Input: the last 25 steps (5 s) of the full 2v2 state; model: linear embedding,
+two temporal convolutions, a GRU, and a linear head (hidden 128); bf16 autocast, AdamW,
+early stopping on the validation window. 1,200 replays, 985k / 200k / 402k decision-point
+windows for train / validation / test; 15 s per epoch, best at epoch 3 of 7.
+
+| | log loss | accuracy |
+| --- | --- | --- |
+| class prior | 1.540 | 0.247 |
+| sequence policy | 0.975 | 0.596 |
+
+Per-class recall: retreat 0.75, challenge 0.66, advance 0.56, hold 0.54, big pad 0.19.
+The decision-point task is genuinely harder than the 1 s continuation task (majority class
+25% rather than 44%), and the model still removes about 37% of the prior's log loss. It
+overfits quickly (validation loss rises from epoch 4), so regularisation and more replays
+are the obvious next levers; the GPU makes both cheap.
+
 ## Reproducing
 
 ```powershell
@@ -68,4 +132,12 @@ from the GC+ norm raise or lower the team's net threat?). That join is straightf
 .\.venv\Scripts\python -m rlreplay decisions-fit --frames data/frames/decisions_2v2 --table data/features/player_game_2v2.parquet --out reports/v2-decisions --train-end 2025-04-01 --valid-end 2025-07-01 --sample-rows 3000000
 ```
 
-The build takes about 25 minutes on 12 cores; the fit about 13 minutes on CPU.
+The stream-walking build takes about 25 minutes on 12 cores; the fit about 13 minutes on CPU.
+The cached path replaces the first command:
+
+```powershell
+.\.venv\Scripts\python -m rlreplay decode --raw data/raw/2v2 --out data/decoded/2v2
+.\.venv\Scripts\python -m rlreplay decisions-build --decoded data/decoded/2v2 --out data/frames/decisions_2v2_h25 --horizon 2.5
+.\.venv\Scripts\python -m rlreplay decisions-fit --frames data/frames/decisions_2v2_h25 --table data/features/player_game_2v2.parquet --out reports/v2-decisions-h25 --train-end 2025-04-01 --valid-end 2025-07-01 --decision-points-only
+.\.venv-torch\Scripts\python -m rlreplay.seqpolicy --frames data/frames/decisions_2v2_h25 --table data/features/player_game_2v2.parquet --out reports/v2-seqpolicy --train-end 2025-04-01 --valid-end 2025-07-01 --replays 1200
+```

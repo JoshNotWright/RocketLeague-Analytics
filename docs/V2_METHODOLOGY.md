@@ -152,3 +152,26 @@ is meant to be left running. A 429 from the server pauses every endpoint togethe
 read only from `BALLCHASING_API_KEY`, is never written to disk or printed, and a missing key
 exits with status 2 before any request is made. Lower-rank ballchasing uploads are a
 self-selected sample (players who choose to upload), not a random draw from the rank.
+
+## Decode once, build many (performance)
+
+`python -m rlreplay decode --raw data/raw/2v2 --out data/decoded/2v2` runs rrrocket and the
+stream walker once per replay and writes compact arrays (`<id>.npz`, about 1 MB): per frame
+the time, active flag, round start, clock, ball position/velocity, and for every player slot
+position, velocity and boost, plus the player table, header goals and demolitions. Downstream
+products can then be computed with numpy over arrays. The decision dataset uses this path
+(`decisions-build --decoded data/decoded/2v2`): 0.16 s per replay against 4 to 6 s for the
+stream-walking builder, with a parity test (`tests/test_rlreplay_decode.py`) and a check on
+real replays showing identical labels and float32-level agreement on every feature. Changing a
+label horizon is now a one-minute rebuild instead of a 25-minute one. The `extract` and
+`touches` commands also write one parquet per replay from the workers instead of shipping row
+lists back to the parent, and rrrocket output is parsed with orjson when available.
+
+To pull one player's own uploads instead of a rank band (for scoring your own games), filter
+by player id and clear the rank bounds, for example:
+
+```powershell
+$env:BALLCHASING_API_KEY = "<your key>"
+python -m rlreplay crawl --out data/raw --name pastorkurt --player-id epic:3a1659f2b97140a88b7607f35c4f60e1 --min-rank "" --max-rank "" --playlist ranked-doubles
+python -m rlreplay score --raw data/raw/pastorkurt --out reports/pastorkurt --focus PastorKurt
+```

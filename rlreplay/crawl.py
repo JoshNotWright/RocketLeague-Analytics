@@ -519,14 +519,18 @@ def add_arguments(parser) -> None:
     parser.add_argument("--sort-dir", default="asc", choices=("asc", "desc"))
     parser.add_argument("--tier", default=DEFAULT_TIER, choices=sorted(TIERS),
                         help="ballchasing Patreon tier that owns the key; sets the quotas")
+    parser.add_argument("--player-id", default=None,
+                        help="only replays containing this player, e.g. epic:<id> or steam:<id>; "
+                             "combine with --min-rank '' --max-rank '' to take all of their games")
     parser.add_argument("--max-replays", type=int, default=None, help="stop after saving this many new replays")
     parser.add_argument("--timeout", type=float, default=120.0)
 
 
 def main_from_args(args) -> int:
-    filters = build_filters(playlist=args.playlist, min_rank=args.min_rank, max_rank=args.max_rank,
+    extra = {"player-id": args.player_id} if getattr(args, "player_id", None) else None
+    filters = build_filters(playlist=args.playlist, min_rank=args.min_rank or None, max_rank=args.max_rank or None,
                             season=args.season, after=args.after, before=args.before, count=args.count,
-                            sort_by=args.sort_by, sort_dir=args.sort_dir)
+                            sort_by=args.sort_by, sort_dir=args.sort_dir, extra=extra)
     out = Path(args.out) / args.name
     try:
         crawler = Crawler(out, filters, tier=args.tier, max_replays=args.max_replays, timeout=args.timeout)

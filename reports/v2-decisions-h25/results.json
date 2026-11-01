@@ -1,0 +1,118 @@
+{
+ "decision_points_only": true,
+ "rows": {
+  "total_available": 4038190,
+  "sampled": 2997869,
+  "train": 1846887,
+  "valid": 385419,
+  "test": 765563
+ },
+ "best_iteration": 1513,
+ "test_logloss": 0.9183081202921812,
+ "prior_logloss": 1.5420734897510615,
+ "accuracy": 0.6170060465304619,
+ "prior_accuracy": 0.2458677764259535,
+ "per_class": {
+  "challenge": {
+   "share": 0.24371475632965542,
+   "recall": 0.6867546722835903,
+   "mean_prob_when_true": 0.5450645272435655
+  },
+  "big_pad": {
+   "share": 0.07110453352630679,
+   "recall": 0.22281620281069164,
+   "mean_prob_when_true": 0.24942977286474277
+  },
+  "retreat": {
+   "share": 0.22883681682630952,
+   "recall": 0.7604130396314838,
+   "mean_prob_when_true": 0.5956766899665735
+  },
+  "advance": {
+   "share": 0.20781699220051125,
+   "recall": 0.6249457877898389,
+   "mean_prob_when_true": 0.5242442450674559
+  },
+  "hold": {
+   "share": 0.248526901117217,
+   "recall": 0.5227027850922145,
+   "mean_prob_when_true": 0.42537959174450485
+  }
+ },
+ "importances": [
+  {
+   "feature": "me_y",
+   "gain_share": 0.13296727771034722
+  },
+  {
+   "feature": "ball_vy",
+   "gain_share": 0.06321439251744605
+  },
+  {
+   "feature": "me_boost",
+   "gain_share": 0.05667693599243235
+  },
+  {
+   "feature": "closing_speed",
+   "gain_share": 0.05572601031346977
+  },
+  {
+   "feature": "me_dist_ball",
+   "gain_share": 0.04395259358290974
+  },
+  {
+   "feature": "me_ahead_of_ball",
+   "gain_share": 0.029714071121811562
+  },
+  {
+   "feature": "me_closer_than_mate",
+   "gain_share": 0.028433104785638822
+  },
+  {
+   "feature": "opp1_dist_ball",
+   "gain_share": 0.028331650667176234
+  },
+  {
+   "feature": "time_since_kickoff",
+   "gain_share": 0.02601480353185134
+  },
+  {
+   "feature": "me_speed",
+   "gain_share": 0.025792869195265588
+  },
+  {
+   "feature": "time_to_ball",
+   "gain_share": 0.02285446492485356
+  },
+  {
+   "feature": "me_vy",
+   "gain_share": 0.02239701157600796
+  },
+  {
+   "feature": "mate_vy",
+   "gain_share": 0.018673390269605166
+  },
+  {
+   "feature": "opp1_vy",
+   "gain_share": 0.018288151286629053
+  },
+  {
+   "feature": "mate_dist_ball",
+   "gain_share": 0.017640759104472298
+  }
+ ],
+ "reliability": {
+  "decision_loglik": {
+   "players": 76,
+   "split_half_corr": 0.07600855606052263
+  },
+  "challenge_rate": {
+   "players": 76,
+   "split_half_corr": 0.41200280105901194
+  },
+  "challenge_minus_policy": {
+   "players": 76,
+   "split_half_corr": 0.2955081848150652
+  }
+ }
+}

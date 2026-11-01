@@ -55,7 +55,12 @@ scripts/crawler_down.sh   # push, validate, delete server (refuses if a batch is
 `crawler_up.sh` (runs on the laptop or the homelab):
 1. `hcloud server create` from a snapshot that already has Python, the venv, rclone and
    `tools/rldecode` (build the snapshot once with `scripts/crawler_image.sh`; rebuild when
-   the repo's pipeline changes). Server type with 4+ vCPU; no volume.
+   the repo's pipeline changes). Default server type **CPX32** in an EU location (4 vCPU,
+   8 GB, 160 GB NVMe, 20 TB traffic; EUR 0.0577/h, capped at EUR 35.99/mo as of 2026-11-01).
+   Four cores decode ~45 replays/s against a crawl of 2/s, and 160 GB holds five 20k-replay
+   batches, so decode never lags and validation can lag by hours without pausing the crawl.
+   A million replays is about six days at rate, roughly EUR 8-9 of compute. No volume.
+   Make the type a parameter; CPX22 (80 GB) works with a 10k batch if cost matters more.
 2. Waits for SSH, then pipes `BALLCHASING_API_KEY` from the local environment over SSH into
    `/etc/rlreplay/env` (root, mode 600). Never cloud-init, never a command-line argument,
    never echoed. A systemd unit uses it as `EnvironmentFile`.

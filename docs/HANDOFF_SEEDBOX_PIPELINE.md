@@ -61,9 +61,13 @@ scripts/crawler_down.sh   # push, validate, delete server (refuses if a batch is
    batches, so decode never lags and validation can lag by hours without pausing the crawl.
    A million replays is about six days at rate, roughly EUR 8-9 of compute. No volume.
    Make the type a parameter; CPX22 (80 GB) works with a 10k batch if cost matters more.
-2. Waits for SSH, then pipes `BALLCHASING_API_KEY` from the local environment over SSH into
-   `/etc/rlreplay/env` (root, mode 600). Never cloud-init, never a command-line argument,
-   never echoed. A systemd unit uses it as `EnvironmentFile`.
+2. Waits for SSH (a Hetzner firewall rule allows port 22 from the operator's current IP
+   only), then pipes `BALLCHASING_API_KEY` and a pre-authorised, ephemeral Tailscale auth
+   key from the local environment over SSH into `/etc/rlreplay/env` (root, mode 600).
+   Never cloud-init, never a command-line argument, never echoed. A systemd unit uses it
+   as `EnvironmentFile`. The box joins the tailnet as an ephemeral node (removed
+   automatically on delete); the up script then drops the public port-22 rule and all
+   later SSH, status checks, pushes and validation triggers go over the tailnet address.
 3. Pulls the ledger (`meta/` and `crawl_state.json` files) from the homelab with rclone.
 4. Starts `rlreplay-crawler.service`, which loops: crawl window -> decode batch -> manifest
    -> push -> (lab validates) -> cleanup, in batches of N replays, until the configured
@@ -78,6 +82,15 @@ scripts/crawler_down.sh   # push, validate, delete server (refuses if a batch is
 Both scripts are idempotent: `up` on an existing server reattaches, `down` on a missing
 server is a no-op. The hcloud token lives in the local environment (`HCLOUD_TOKEN`) with
 the same rules as the ballchasing key.
+
+## Network
+
+No port forwarding on the homelab. Lab and box talk only over Tailscale (WireGuard): the
+box pushes with rclone over SFTP to the lab's tailnet address and triggers validation over
+SSH to the same address. The lab's sshd accepts the tailnet interface only. The box's
+public IP carries only outbound traffic (ballchasing API, Tailscale) after bootstrap.
+Secrets involved: `TS_AUTHKEY` (ephemeral, pre-authorised, tagged for the crawler role)
+under the same handling rules as the other two keys.
 
 ## Code changes
 
@@ -121,6 +134,6 @@ the same rules as the ballchasing key.
 
 ## Secrets
 
-`BALLCHASING_API_KEY` and `HCLOUD_TOKEN` live in the local environment and, on the box,
+`BALLCHASING_API_KEY`, `HCLOUD_TOKEN` and `TS_AUTHKEY` live in the local environment and, on the box,
 in a root-only env file written over SSH at boot. Never in a script, cloud-init, the
 snapshot, the repo or a log. Same rules as the laptop.

@@ -229,3 +229,42 @@ indicators rather than literal probabilities.
 .\.venv\Scripts\python -m rlreplay xg --touches data/features/touches_2v2.parquet --table data/features/player_game_2v2.parquet --out reports/v2-xg --train-end 2025-04-01 --valid-end 2025-07-01
 .\.venv\Scripts\python -m rlreplay value --touches-scored reports/v2-xg/touches_scored.parquet --out reports/v2-value
 ```
+
+
+## Rank-conditioned refit (2026-11-01)
+
+The models above learned GC+ goalkeeping. Applied to Diamond games they under-price shots:
+in held-out Diamond games (PastorKurt's uploads, 1,039 shots) the goal rate is 36% but the GC+
+model's mean xG on those shots is 0.26, so every Diamond player looks like a 99th-percentile
+finisher. The fix is to condition on the level of play. `rlreplay/ranks.py` gives each replay a
+`game_rank` (mean ballchasing rank points over the players tagged with a rank, so it describes
+the opposition as much as the player) and `game_rank` is now part of `STATE_FEATURES` for all
+three models. Refit on Kaggle GC+ touches plus 471k touches from 2,898 Diamond-level games
+(`reports/v2-xg-ranked`, same date split):
+
+| model | log loss | AUC | GC+-only AUC | `game_rank` gain share |
+| --- | --- | --- | --- | --- |
+| touch xG (shots only) | 0.0451 | 0.883 | 0.878 | 0.014 |
+| threat | 0.329 | 0.717 | 0.712 | 0.018 |
+| threat against | 0.233 | 0.663 | 0.661 | 0.032 |
+
+Calibration by band on held-out shots:
+
+| band | shots | goal rate | GC+-only xG | rank-conditioned xG |
+| --- | --- | --- | --- | --- |
+| diamond | 1,039 | 0.360 | 0.262 | 0.356 |
+| gc | 14,537 | 0.239 | 0.241 | 0.241 |
+| platinum and below | 357 | 0.387 | 0.260 | 0.409 |
+
+GC calibration is untouched and Diamond is now priced correctly, so goals above xG means the
+same thing at every rank: finishing relative to peers facing the same goalkeeping. Its
+split-half reliability on the combined population is 0.07 (xG per game 0.64), the same
+conclusion as before. Scoring (`rlreplay score`) reads match ranks from the `metadata.json`
+the crawler writes next to the replays; without one the models fall back to their default
+path for a missing `game_rank` and the report says so.
+
+References are now built per band (`build-reference --band diamond|champion|gc --table ...`)
+and `score` picks, for each player, the reference whose band contains their median match
+rank, falling back to the all-ranks file. The Diamond and Champion references need the
+rank-band crawl (`scripts/crawl_bands.ps1`); until it lands only `gc_2v2.json` and the
+all-ranks `gcplus_2v2.json` exist in `rlreplay/reference/`.

@@ -109,6 +109,34 @@ class CrawlTests(unittest.TestCase):
         self.assertEqual(sum(u.endswith("/file") for u in site.calls), 3)
         self.assertNotIn("after=", list_calls[0])
 
+    def test_worker_pool_matches_sequential_output(self):
+        ids1 = [f"r{i:02d}" for i in range(20)]
+        ids2 = [f"r{i:02d}" for i in range(18, 30)]  # overlap with page one is skipped, not refetched
+        site = FakeSite({None: ids1, "p2": ids2})
+        result = self.crawler(site, workers=4).run()
+        self.assertEqual(result["stats"]["saved"], 30)
+        self.assertEqual(result["stats"]["skipped_done"], 2)
+        self.assertEqual(result["stats"]["failed"], 0)
+        self.assertTrue(result["listing_complete"])
+        self.assertEqual(sorted(p.stem for p in self.out.glob("*.replay")), sorted(set(ids1 + ids2)))
+        lines = (self.out / "metadata.json").read_text(encoding="utf-8").splitlines()
+        meta_ids = [json.loads(l)["id"] for l in lines]
+        self.assertEqual(sorted(meta_ids), sorted(set(ids1 + ids2)))
+        self.assertEqual(len(meta_ids), len(set(meta_ids)))
+        self.assertEqual(sum(u.endswith("/file") for u in site.calls), 30)
+        state = json.loads((self.out / "crawl_state.json").read_text(encoding="utf-8"))
+        self.assertEqual(len(state["done"]), 30)
+
+    def test_worker_pool_respects_max_replays_and_resumes(self):
+        ids = [f"r{i:02d}" for i in range(12)]
+        site = FakeSite({None: ids})
+        first = self.crawler(site, workers=3, max_replays=5).run()
+        self.assertEqual(first["stats"]["saved"], 5)
+        self.assertFalse(first["listing_complete"])
+        second = self.crawler(site, workers=3).run()
+        self.assertEqual(second["stats"]["saved"], 7)
+        self.assertEqual(sorted(p.stem for p in self.out.glob("*.replay")), ids)
+
     def test_metadata_lines_match_kaggle_shape(self):
         line = metadata_line(detail("x"))
         record = json.loads(line)

@@ -26,3 +26,5 @@ reports/v2-decisions/*.lgb.txt
 reports/**/*.lgb.txt
 !reports/v2-xg/*.lgb.txt
 reports/**/*.pt
+!reports/v2-xg-ranked/*.lgb.txt
+reports/pastorkurt*/report.json

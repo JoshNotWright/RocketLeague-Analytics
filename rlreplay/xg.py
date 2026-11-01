@@ -19,6 +19,7 @@ import numpy as np
 import polars as pl
 
 from .model import _utc, binary_metrics, importances
+from .ranks import attach_game_rank
 
 STATE_FEATURES = [
     "ball_x", "ball_y", "ball_z", "pre_vx", "pre_vy", "pre_vz", "pre_speed",
@@ -27,6 +28,7 @@ STATE_FEATURES = [
     "n_mates", "mate_min_dist", "mates_ahead", "mate_min_dist_own_goal",
     "n_opps", "opp_min_dist_ball", "opp_min_dist_goal", "opps_between", "opps_behind_ball", "opp_nearest_boost",
     "seconds_remaining", "time_since_kickoff", "score_diff", "team_size",
+    "game_rank",  # mean rank points of the match (ranks.py); conditions every model on the level of play
 ]
 POST_FEATURES = ["post_vx", "post_vy", "post_vz", "post_speed", "post_toward_goal", "post_angle_off_goal",
                  "proj_x", "proj_z", "proj_t", "shot"]
@@ -52,8 +54,9 @@ def calibration(y, p, bins=10) -> list[dict]:
 
 
 def attach_dates(touches: pl.DataFrame, table: pl.DataFrame) -> pl.DataFrame:
+    """Join the match date and, when the table carries ranks, the match's ``game_rank``."""
     dates = table.select("replay_id", "played_at").unique(subset=["replay_id"])
-    return touches.join(dates, on="replay_id", how="left")
+    return attach_game_rank(touches.join(dates, on="replay_id", how="left"), table)
 
 
 def fit(train, valid, features, target):
@@ -73,7 +76,9 @@ def run(touches: pl.DataFrame, table: pl.DataFrame, out: Path, *, train_end: str
     valid = df.filter((pl.col("played_at") >= a) & (pl.col("played_at") < b))
     test = df.filter(pl.col("played_at") >= b)
     report = {"rows": {"train": train.height, "valid": valid.height, "test": test.height},
-              "train_end": train_end, "valid_end": valid_end, "models": {}}
+              "train_end": train_end, "valid_end": valid_end, "models": {},
+              "rank_bands": ({k: int(v) for k, v in df.group_by("rank_band").len().iter_rows()}
+                             if "rank_band" in df.columns else {})}
     scored = df
     for name, spec in MODELS.items():
         features = [f for f in spec["features"] if f in df.columns]

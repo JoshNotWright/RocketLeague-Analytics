@@ -12,6 +12,10 @@ variable ``BALLCHASING_API_KEY`` and is never logged or written to disk.
 Rate limits (https://ballchasing.com/doc/api, per endpoint, per Patreon tier) are enforced
 client-side by ``Pacer``: a per-call minimum interval plus a sliding one-hour budget for each
 endpoint, and a shared back-off whenever the server answers 429.
+
+``workers`` fetches several replays of a page at once. The pacers are shared, so the
+published per-second limits still hold; concurrency only stops one slow download from
+stalling the rest, which is what limits a GC-tier key on an ordinary connection.
 """
 from __future__ import annotations
 
@@ -21,7 +25,9 @@ import sys
 import threading
 import time
 from collections import deque
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
+from http.client import HTTPException
 from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.parse import parse_qs, quote, urlencode, urljoin, urlsplit, urlunsplit
@@ -247,7 +253,7 @@ class Crawler:
     def __init__(self, out_dir, filters: dict, *, tier: str = DEFAULT_TIER, max_replays: int | None = None,
                  key: str | None = None, transport=None, sleep=time.sleep, clock=time.monotonic,
                  timeout: float = 120.0, max_retries: int = 6, max_429: int = 24, log=_log,
-                 progress_every: int = 25):
+                 progress_every: int = 25, workers: int = 1):
         if tier not in TIERS:
             raise ValueError(f"tier must be one of {sorted(TIERS)}")
         self.out = Path(out_dir)
@@ -259,6 +265,9 @@ class Crawler:
         self.timeout, self.max_retries, self.max_429 = timeout, max_retries, max_429
         self.log = log
         self.progress_every = progress_every
+        self.workers = max(1, int(workers))
+        self.lock = threading.RLock()  # guards state, done, the metadata file and stats
+        self.inflight = 0  # fetches started but not yet counted, so the pool cannot overshoot max_replays
         if transport is None:
             key = key if key is not None else os.environ.get(KEY_ENV)
             if not key:
@@ -317,11 +326,12 @@ class Crawler:
         return ids
 
     def save_state(self) -> None:
-        self.state["done"] = sorted(self.done)
-        self.state["updated"] = _now_text()
-        self.state["stats_last_run"] = dict(self.stats)
-        self.out.mkdir(parents=True, exist_ok=True)
-        _atomic_json(self.state_path, self.state)
+        with self.lock:
+            self.state["done"] = sorted(self.done)
+            self.state["updated"] = _now_text()
+            self.state["stats_last_run"] = dict(self.stats)
+            self.out.mkdir(parents=True, exist_ok=True)
+            _atomic_json(self.state_path, self.state)
 
     # ---- http -------------------------------------------------------------------------
 
@@ -348,7 +358,7 @@ class Crawler:
                 if exc.code not in RETRYABLE or attempt > self.max_retries:
                     raise CrawlError(f"HTTP {exc.code} on {endpoint}; attempts={attempt}") from None
                 self.sleep(min(60, 2 ** attempt))
-            except (URLError, TimeoutError, OSError):
+            except (URLError, TimeoutError, OSError, HTTPException):  # HTTPException: truncated body
                 attempt += 1
                 if attempt > self.max_retries:
                     raise CrawlError(f"network failure on {endpoint}; attempts={attempt}") from None
@@ -394,7 +404,7 @@ class Crawler:
         return list_url(self.active_filters)
 
     def budget_left(self) -> bool:
-        return self.max_replays is None or self.stats["saved"] < self.max_replays
+        return self.max_replays is None or self.stats["saved"] + self.inflight < self.max_replays
 
     def fetch_one(self, replay_id: str) -> str:
         """Fetch detail + file for one replay. Returns 'saved', 'deferred' or 'failed'."""
@@ -404,7 +414,8 @@ class Crawler:
             raise CrawlError("replay detail id differs from the requested id")
         status = detail.get("status")
         if status != "ok":
-            self.state["deferred"][replay_id] = status or "unknown"
+            with self.lock:
+                self.state["deferred"][replay_id] = status or "unknown"
             return "deferred"
         if not (dest.exists() and dest.stat().st_size > 0):
             body = self.request("file", API_ROOT + "/replays/" + quote(replay_id, safe="") + "/file")
@@ -421,31 +432,58 @@ class Crawler:
                         tmp.unlink()
                     except OSError:
                         pass
-        if replay_id not in self.meta_ids:
-            with open(self.meta_path, "a", encoding="utf-8") as handle:
-                handle.write(metadata_line(detail) + "\n")
-            self.meta_ids.add(replay_id)
-        self.done.add(replay_id)
-        self.state["deferred"].pop(replay_id, None)
-        self.state["failed"].pop(replay_id, None)
-        date = detail.get("date")
-        if date and (self.state["last_replay_date"] is None or date > self.state["last_replay_date"]):
-            self.state["last_replay_date"] = date
+        with self.lock:
+            if replay_id not in self.meta_ids:
+                with open(self.meta_path, "a", encoding="utf-8") as handle:
+                    handle.write(metadata_line(detail) + "\n")
+                self.meta_ids.add(replay_id)
+            self.done.add(replay_id)
+            self.state["deferred"].pop(replay_id, None)
+            self.state["failed"].pop(replay_id, None)
+            date = detail.get("date")
+            if date and (self.state["last_replay_date"] is None or date > self.state["last_replay_date"]):
+                self.state["last_replay_date"] = date
         return "saved"
 
     def process(self, replay_id: str) -> None:
-        if replay_id in self.done:
-            self.stats["skipped_done"] += 1
-            return
+        with self.lock:
+            if replay_id in self.done:
+                self.stats["skipped_done"] += 1
+                return
+            if not self.budget_left():
+                return  # the cursor stays on this page, so the id is listed again next run
+            self.inflight += 1
         try:
             outcome = self.fetch_one(replay_id)
         except CrawlError as exc:
             outcome = "failed"
-            self.state["failed"][replay_id] = str(exc)
-        self.stats[outcome] += 1
-        self.save_state()
-        if outcome == "saved" and self.stats["saved"] % self.progress_every == 0:
-            self.log(self.summary())
+            with self.lock:
+                self.state["failed"][replay_id] = str(exc)
+        finally:
+            with self.lock:
+                self.inflight -= 1
+        with self.lock:
+            self.stats[outcome] += 1
+            self.save_state()
+            if outcome == "saved" and self.stats["saved"] % self.progress_every == 0:
+                self.log(self.summary())
+
+    def process_page(self, ids: list) -> None:
+        if self.workers == 1:
+            for replay_id in ids:
+                if not self.budget_left():
+                    break
+                self.process(replay_id)
+            return
+        with ThreadPoolExecutor(max_workers=self.workers, thread_name_prefix="crawl") as pool:
+            futures = [pool.submit(self.process, replay_id) for replay_id in ids]
+            try:
+                for future in futures:
+                    future.result()
+            except BaseException:
+                for future in futures:
+                    future.cancel()
+                raise
 
     def run(self) -> dict:
         self.out.mkdir(parents=True, exist_ok=True)
@@ -453,7 +491,7 @@ class Crawler:
         current = None
         try:
             current = self._start_url()
-            self.log(f"tier={self.tier} out={self.out} done={len(self.done)} "
+            self.log(f"tier={self.tier} workers={self.workers} out={self.out} done={len(self.done)} "
                      f"max_replays={self.max_replays} filters={self.active_filters}")
             while current and self.budget_left():
                 _safe_url(current)
@@ -470,10 +508,7 @@ class Crawler:
                     if isinstance(item, dict) and isinstance(item.get("id"), str) and item["id"]:
                         if item["id"] not in ids:
                             ids.append(item["id"])
-                for replay_id in ids:
-                    if not self.budget_left():
-                        break
-                    self.process(replay_id)
+                self.process_page(ids)
                 if not self.budget_left():
                     break  # cursor stays on this page; its remaining ids are picked up next run
                 current = self._next_url(current, page.get("next"))
@@ -524,6 +559,8 @@ def add_arguments(parser) -> None:
                              "combine with --min-rank '' --max-rank '' to take all of their games")
     parser.add_argument("--max-replays", type=int, default=None, help="stop after saving this many new replays")
     parser.add_argument("--timeout", type=float, default=120.0)
+    parser.add_argument("--workers", type=int, default=1,
+                        help="replays fetched concurrently (the rate limits still apply); 4 suits a GC key")
 
 
 def main_from_args(args) -> int:
@@ -533,7 +570,8 @@ def main_from_args(args) -> int:
                             sort_by=args.sort_by, sort_dir=args.sort_dir, extra=extra)
     out = Path(args.out) / args.name
     try:
-        crawler = Crawler(out, filters, tier=args.tier, max_replays=args.max_replays, timeout=args.timeout)
+        crawler = Crawler(out, filters, tier=args.tier, max_replays=args.max_replays, timeout=args.timeout,
+                          workers=getattr(args, "workers", 1))
     except MissingKeyError as exc:
         print(f"crawl aborted: {exc}", file=sys.stderr, flush=True)
         print(f"summary: saved=0 out={out} (nothing fetched)", file=sys.stderr, flush=True)

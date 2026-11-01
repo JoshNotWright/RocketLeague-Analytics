@@ -1,0 +1,554 @@
+{
+ "rows": {
+  "train": 819782,
+  "valid": 89723,
+  "test": 174992
+ },
+ "train_end": "2025-04-01",
+ "valid_end": "2025-07-01",
+ "models": {
+  "touch_xg": {
+   "target": "scored",
+   "n_features": 40,
+   "best_iteration": 843,
+   "base_rate_train": 0.032509862378046844,
+   "constant": {
+    "n": 174992,
+    "log_loss": 0.1303509847688219,
+    "auc": 0.5,
+    "brier": 0.02786800835247685,
+    "accuracy": 0.9713244034012983
+   },
+   "test": {
+    "n": 174992,
+    "log_loss": 0.045100113502749735,
+    "auc": 0.9804370485790612,
+    "brier": 0.012607916074391684,
+    "accuracy": 0.982953506446009
+   },
+   "calibration": [
+    {
+     "bin": 0,
+     "n": 17500,
+     "mean_pred": 5.930479407471133e-05,
+     "mean_actual": 0.00011428571428571428
+    },
+    {
+     "bin": 1,
+     "n": 17500,
+     "mean_pred": 0.00013268124102046915,
+     "mean_actual": 0.00017142857142857143
+    },
+    {
+     "bin": 2,
+     "n": 17499,
+     "mean_pred": 0.00022305402519061656,
+     "mean_actual": 0.0004571689810846334
+    },
+    {
+     "bin": 3,
+     "n": 17499,
+     "mean_pred": 0.00034662411982471034,
+     "mean_actual": 0.00040002285844905423
+    },
+    {
+     "bin": 4,
+     "n": 17499,
+     "mean_pred": 0.0005270180470697024,
+     "mean_actual": 0.0003428767358134751
+    },
+    {
+     "bin": 5,
+     "n": 17499,
+     "mean_pred": 0.0008038380335471367,
+     "mean_actual": 0.0008571918395336877
+    },
+    {
+     "bin": 6,
+     "n": 17499,
+     "mean_pred": 0.00128387757103595,
+     "mean_actual": 0.0014286530658894794
+    },
+    {
+     "bin": 7,
+     "n": 17499,
+     "mean_pred": 0.0022911295695325477,
+     "mean_actual": 0.0026858677638722213
+    },
+    {
+     "bin": 8,
+     "n": 17499,
+     "mean_pred": 0.006347449630687689,
+     "mean_actual": 0.00691468083890508
+    },
+    {
+     "bin": 9,
+     "n": 17499,
+     "mean_pred": 0.2755042748140348,
+     "mean_actual": 0.2733870506886108
+    }
+   ],
+   "importances": [
+    {
+     "feature": "shot",
+     "gain_share": 0.34764910091904055
+    },
+    {
+     "feature": "proj_x",
+     "gain_share": 0.08584775830964238
+    },
+    {
+     "feature": "ball_y",
+     "gain_share": 0.08075264730401865
+    },
+    {
+     "feature": "goal_angle_width",
+     "gain_share": 0.06095272348008583
+    },
+    {
+     "feature": "proj_t",
+     "gain_share": 0.04808578411244261
+    },
+    {
+     "feature": "proj_z",
+     "gain_share": 0.044253139485748605
+    },
+    {
+     "feature": "post_angle_off_goal",
+     "gain_share": 0.037589895412726206
+    },
+    {
+     "feature": "opp_min_dist_goal",
+     "gain_share": 0.03248687775071289
+    },
+    {
+     "feature": "post_vy",
+     "gain_share": 0.01759365389481634
+    },
+    {
+     "feature": "post_speed",
+     "gain_share": 0.017049617675835193
+    },
+    {
+     "feature": "post_vz",
+     "gain_share": 0.017013108253960303
+    },
+    {
+     "feature": "post_toward_goal",
+     "gain_share": 0.01529289490853191
+    },
+    {
+     "feature": "opp_min_dist_ball",
+     "gain_share": 0.01485838521494491
+    },
+    {
+     "feature": "dist_goal",
+     "gain_share": 0.014342613467659464
+    },
+    {
+     "feature": "game_rank",
+     "gain_share": 0.014132351220142891
+    },
+    {
+     "feature": "pre_vy",
+     "gain_share": 0.013439294175984705
+    },
+    {
+     "feature": "ball_z",
+     "gain_share": 0.010111656015575933
+    },
+    {
+     "feature": "opps_behind_ball",
+     "gain_share": 0.00977819873786757
+    },
+    {
+     "feature": "me_z",
+     "gain_share": 0.00977544072539582
+    },
+    {
+     "feature": "mate_min_dist",
+     "gain_share": 0.00917510209493251
+    }
+   ],
+   "test_shots_only": {
+    "n": 15933,
+    "log_loss": 0.3564150222645207,
+    "auc": 0.8832842629793546,
+    "brier": 0.11221290129473895,
+    "accuracy": 0.842277035084416
+   }
+  },
+  "threat": {
+   "target": "team_goal_within_10s",
+   "n_features": 30,
+   "best_iteration": 379,
+   "base_rate_train": 0.12559558516776412,
+   "constant": {
+    "n": 174992,
+    "log_loss": 0.37357816356785745,
+    "auc": 0.5,
+    "brier": 0.10814297299599393,
+    "accuracy": 0.8766457895218067
+   },
+   "test": {
+    "n": 174992,
+    "log_loss": 0.32886538931304704,
+    "auc": 0.7165894691747279,
+    "brier": 0.09472482302543626,
+    "accuracy": 0.88558905549968
+   },
+   "calibration": [
+    {
+     "bin": 0,
+     "n": 17500,
+     "mean_pred": 0.03636123707564886,
+     "mean_actual": 0.038285714285714284
+    },
+    {
+     "bin": 1,
+     "n": 17500,
+     "mean_pred": 0.05503688478703979,
+     "mean_actual": 0.056342857142857146
+    },
+    {
+     "bin": 2,
+     "n": 17499,
+     "mean_pred": 0.06637945756473788,
+     "mean_actual": 0.06206068918223898
+    },
+    {
+     "bin": 3,
+     "n": 17499,
+     "mean_pred": 0.07668145819482265,
+     "mean_actual": 0.07600434310532031
+    },
+    {
+     "bin": 4,
+     "n": 17499,
+     "mean_pred": 0.08707753269669764,
+     "mean_actual": 0.08583347619863992
+    },
+    {
+     "bin": 5,
+     "n": 17499,
+     "mean_pred": 0.09919062836078742,
+     "mean_actual": 0.09446254071661238
+    },
+    {
+     "bin": 6,
+     "n": 17499,
+     "mean_pred": 0.11545315427644096,
+     "mean_actual": 0.11103491628093033
+    },
+    {
+     "bin": 7,
+     "n": 17499,
+     "mean_pred": 0.13921640463382481,
+     "mean_actual": 0.13412194982570433
+    },
+    {
+     "bin": 8,
+     "n": 17499,
+     "mean_pred": 0.18281870187121418,
+     "mean_actual": 0.18041030916052345
+    },
+    {
+     "bin": 9,
+     "n": 17499,
+     "mean_pred": 0.3953786726734708,
+     "mean_actual": 0.3949939996571233
+    }
+   ],
+   "importances": [
+    {
+     "feature": "goal_angle_width",
+     "gain_share": 0.21812605535531193
+    },
+    {
+     "feature": "dist_goal",
+     "gain_share": 0.11902254643016363
+    },
+    {
+     "feature": "opps_behind_ball",
+     "gain_share": 0.09520524828402509
+    },
+    {
+     "feature": "opp_min_dist_ball",
+     "gain_share": 0.07294160680757655
+    },
+    {
+     "feature": "opp_min_dist_goal",
+     "gain_share": 0.050014461509387924
+    },
+    {
+     "feature": "me_boost",
+     "gain_share": 0.0339349863936721
+    },
+    {
+     "feature": "me_speed",
+     "gain_share": 0.03305343688092823
+    },
+    {
+     "feature": "dist_own_goal",
+     "gain_share": 0.030464386553904522
+    },
+    {
+     "feature": "ball_y",
+     "gain_share": 0.029726927605966274
+    },
+    {
+     "feature": "pre_vy",
+     "gain_share": 0.029402356484013535
+    },
+    {
+     "feature": "ball_z",
+     "gain_share": 0.02754354579462096
+    },
+    {
+     "feature": "opps_between",
+     "gain_share": 0.02359058728337172
+    },
+    {
+     "feature": "seconds_remaining",
+     "gain_share": 0.022027745398732777
+    },
+    {
+     "feature": "me_z",
+     "gain_share": 0.02178674417368038
+    },
+    {
+     "feature": "ball_x",
+     "gain_share": 0.021204949856232853
+    },
+    {
+     "feature": "me_dist_own_goal",
+     "gain_share": 0.020548428448296345
+    },
+    {
+     "feature": "time_since_kickoff",
+     "gain_share": 0.02033700611897844
+    },
+    {
+     "feature": "pre_speed",
+     "gain_share": 0.019769336273919545
+    },
+    {
+     "feature": "opp_nearest_boost",
+     "gain_share": 0.01939974310589105
+    },
+    {
+     "feature": "game_rank",
+     "gain_share": 0.018391290663393907
+    }
+   ]
+  },
+  "threat_against": {
+   "target": "opp_goal_within_10s",
+   "n_features": 30,
+   "best_iteration": 302,
+   "base_rate_train": 0.07197157293036441,
+   "constant": {
+    "n": 174992,
+    "log_loss": 0.24886948915391002,
+    "auc": 0.5,
+    "brier": 0.06349716614587042,
+    "accuracy": 0.9318768858004938
+   },
+   "test": {
+    "n": 174992,
+    "log_loss": 0.2333521219063611,
+    "auc": 0.6631492486292959,
+    "brier": 0.060318352708563235,
+    "accuracy": 0.9331226570357503
+   },
+   "calibration": [
+    {
+     "bin": 0,
+     "n": 17500,
+     "mean_pred": 0.025356118758256947,
+     "mean_actual": 0.025257142857142856
+    },
+    {
+     "bin": 1,
+     "n": 17500,
+     "mean_pred": 0.037818059621619105,
+     "mean_actual": 0.03662857142857143
+    },
+    {
+     "bin": 2,
+     "n": 17499,
+     "mean_pred": 0.04439396045495192,
+     "mean_actual": 0.04068803931653237
+    },
+    {
+     "bin": 3,
+     "n": 17499,
+     "mean_pred": 0.05032653703612141,
+     "mean_actual": 0.047602720155437456
+    },
+    {
+     "bin": 4,
+     "n": 17499,
+     "mean_pred": 0.0564342478676211,
+     "mean_actual": 0.055260300588605066
+    },
+    {
+     "bin": 5,
+     "n": 17499,
+     "mean_pred": 0.0634286741394831,
+     "mean_actual": 0.06040345162580719
+    },
+    {
+     "bin": 6,
+     "n": 17499,
+     "mean_pred": 0.0718560453241845,
+     "mean_actual": 0.06966112349277101
+    },
+    {
+     "bin": 7,
+     "n": 17499,
+     "mean_pred": 0.08250366291528682,
+     "mean_actual": 0.08103320189725127
+    },
+    {
+     "bin": 8,
+     "n": 17499,
+     "mean_pred": 0.09835790969290065,
+     "mean_actual": 0.08457626150065718
+    },
+    {
+     "bin": 9,
+     "n": 17499,
+     "mean_pred": 0.18921757635749437,
+     "mean_actual": 0.18012457854734557
+    }
+   ],
+   "importances": [
+    {
+     "feature": "dist_own_goal",
+     "gain_share": 0.17385927424613126
+    },
+    {
+     "feature": "opp_min_dist_ball",
+     "gain_share": 0.07139282592589546
+    },
+    {
+     "feature": "ball_y",
+     "gain_share": 0.05422470266359366
+    },
+    {
+     "feature": "me_dist_own_goal",
+     "gain_share": 0.05017283545435269
+    },
+    {
+     "feature": "me_boost",
+     "gain_share": 0.04344814711369445
+    },
+    {
+     "feature": "dist_goal",
+     "gain_share": 0.042858627161902314
+    },
+    {
+     "feature": "mate_min_dist_own_goal",
+     "gain_share": 0.04112435556081329
+    },
+    {
+     "feature": "seconds_remaining",
+     "gain_share": 0.04038656552847666
+    },
+    {
+     "feature": "opp_nearest_boost",
+     "gain_share": 0.03764132362148681
+    },
+    {
+     "feature": "mate_min_dist",
+     "gain_share": 0.03708226420336421
+    },
+    {
+     "feature": "me_speed",
+     "gain_share": 0.03637784061325299
+    },
+    {
+     "feature": "pre_vy",
+     "gain_share": 0.033944109539198686
+    },
+    {
+     "feature": "me_z",
+     "gain_share": 0.03390187176236809
+    },
+    {
+     "feature": "ball_z",
+     "gain_share": 0.0328071735723126
+    },
+    {
+     "feature": "goal_angle_width",
+     "gain_share": 0.03224768773447823
+    },
+    {
+     "feature": "game_rank",
+     "gain_share": 0.03198318389721849
+    },
+    {
+     "feature": "time_since_kickoff",
+     "gain_share": 0.03138159460220722
+    },
+    {
+     "feature": "opp_min_dist_goal",
+     "gain_share": 0.03070724150598208
+    },
+    {
+     "feature": "opps_behind_ball",
+     "gain_share": 0.0300656784363234
+    },
+    {
+     "feature": "ball_x",
+     "gain_share": 0.02539690520322968
+    }
+   ]
+  }
+ },
+ "rank_bands": {
+  "gc": 613236,
+  "diamond": 419662,
+  "champion": 38562,
+  "platinum_or_below": 6121,
+  "null": 6916
+ },
+ "skill_checks": {
+  "min_games": 30,
+  "players": 98,
+  "z_variance_ratio": 0.8837117182194818,
+  "share_abs_z_over_2": 0.0,
+  "goals_above_xg_per_game": {
+   "players": 105,
+   "split_half_corr": 0.07263344526276075
+  },
+  "xg_per_game": {
+   "players": 105,
+   "split_half_corr": 0.6383115663726223
+  },
+  "xg_per_shot": {
+   "players": 103,
+   "split_half_corr": 0.31431626776499727
+  },
+  "mean_threat": {
+   "players": 105,
+   "split_half_corr": 0.5454017878769293
+  },
+  "shots_per_game": {
+   "players": 105,
+   "split_half_corr": 0.6340736182192473
+  }
+ },
+ "player_game_checks": {
+  "rows": 20725,
+  "corr_xg_vs_goals": 0.8445460324213593,
+  "corr_goals_vs_bc_goals": 0.9886112265656416,
+  "corr_shots_vs_bc_shots": 0.7846677892902166,
+  "mean_shots": 4.004728588661037,
+  "mean_bc_shots": 3.9717249698431845,
+  "mean_goals": 1.4641254523522316,
+  "mean_bc_goals": 1.4965500603136308,
+  "mean_xg": 1.458284799239575
+ }
+}

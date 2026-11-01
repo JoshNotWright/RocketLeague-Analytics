@@ -147,7 +147,11 @@ published numbers, with `--tier` selecting the row that matches the key's Patreo
 
 The file download is the binding constraint: a free key yields about 180 replays per hour
 (roughly 4000 per day), so a 5000-replay crawl takes more than a day of wall-clock time and
-is meant to be left running. A 429 from the server pauses every endpoint together
+is meant to be left running. On a paid key the hourly caps go away and the crawl is bound
+by network latency instead, because each replay costs two sequential requests; `--workers 4`
+fetches several replays of a page at once behind the same pacers, so the published
+per-second limits still hold and one slow download no longer stalls the rest (about 100
+replays a minute at best on a GC key). A 429 from the server pauses every endpoint together
 (honouring `Retry-After` when sent, otherwise doubling from 10 s up to an hour). The key is
 read only from `BALLCHASING_API_KEY`, is never written to disk or printed, and a missing key
 exits with status 2 before any request is made. Lower-rank ballchasing uploads are a
@@ -167,11 +171,25 @@ label horizon is now a one-minute rebuild instead of a 25-minute one. The `extra
 `touches` commands also write one parquet per replay from the workers instead of shipping row
 lists back to the parent, and rrrocket output is parsed with orjson when available.
 
+### Rank bands and the band crawl
+
+`scripts/crawl_bands.ps1` crawls Diamond, Champion and GC ranked doubles in monthly windows
+(default 200 replays per band per month from 2025-07 for 16 months), so the band corpus is
+spread across the whole date range of the time split rather than piled after the test cutoff.
+Each band lands in `data/raw/2v2_<band>/` with its own metadata and state, and the script is
+resumable. The per-band pipeline is the usual `meta-table`, `extract`, `touches`; `xg` and
+`build-reference` accept several `--touches` / `--table` / `--frames` files (repeat the flag
+or comma-separate), so one fit covers every band, with each match's mean rank as a feature
+(`rlreplay/ranks.py`, see V2_XG.md). `build-reference --band diamond --table ...` keeps only
+games whose mean rank falls in that band; `score --reference rlreplay/reference` then compares
+each player with the band they actually played in.
+
 To pull one player's own uploads instead of a rank band (for scoring your own games), filter
-by player id and clear the rank bounds, for example:
+by player id and clear the rank bounds (`--min-rank=` rather than `--min-rank ""`, because
+PowerShell drops empty quoted arguments), for example:
 
 ```powershell
 $env:BALLCHASING_API_KEY = "<your key>"
-python -m rlreplay crawl --out data/raw --name pastorkurt --player-id epic:3a1659f2b97140a88b7607f35c4f60e1 --min-rank "" --max-rank "" --playlist ranked-doubles
+python -m rlreplay crawl --out data/raw --name pastorkurt --player-id epic:3a1659f2b97140a88b7607f35c4f60e1 --min-rank= --max-rank= --playlist ranked-doubles --tier gc --workers 4
 python -m rlreplay score --raw data/raw/pastorkurt --out reports/pastorkurt --focus PastorKurt
 ```

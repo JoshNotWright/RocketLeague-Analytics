@@ -20,6 +20,7 @@ import polars as pl
 
 from . import value as value_mod
 from . import xg as xg_mod
+from .ranks import attach_game_rank, band_of, band_range
 from .shrink import shrink_table
 
 QUANTILES = [0.05, 0.10, 0.25, 0.50, 0.75, 0.90, 0.95]
@@ -106,9 +107,20 @@ def per_game_table(frames: pl.DataFrame, touches_scored: pl.DataFrame, heads: di
 
 
 def build_reference(player_game_xg: pl.DataFrame, player_game_value: pl.DataFrame, player_game_saves: pl.DataFrame,
-                    frame_features: pl.DataFrame, *, min_games: int = 30) -> dict:
-    """Quantiles of per-player means over GC+ players with at least ``min_games`` games."""
+                    frame_features: pl.DataFrame, *, min_games: int = 30, table: pl.DataFrame | None = None,
+                    band: str | None = None) -> dict:
+    """Quantiles of per-player means over players with at least ``min_games`` games.
+
+    With ``table`` (player-game rows carrying ``rank_points``) and ``band``, only games whose
+    ``game_rank`` falls in that band count, and the reference records the band so ``score``
+    can pick it for players who play there.
+    """
     frames = _player_id_column(frame_features)
+    if band:
+        if table is None:
+            raise ValueError("a band reference needs the player-game table with rank_points")
+        lo, hi = band_range(band)
+        frames = attach_game_rank(frames, table).filter(pl.col("game_rank").is_between(lo, hi)).drop("game_rank", "rank_band")
     game = (frames.join(player_game_xg.select("replay_id", "player_id", "touches", "shots", "goals", "xg", "goals_above_xg", "mean_threat"),
                         on=["replay_id", "player_id"], how="left")
                   .join(player_game_value.select("replay_id", "player_id", "value_added"), on=["replay_id", "player_id"], how="left")
@@ -121,7 +133,8 @@ def build_reference(player_game_xg: pl.DataFrame, player_game_value: pl.DataFram
                           [c for _, c, _ in METRICS], min_games=min_games)
     prior_by_col = {row["statistic"]: row for row in
                     priors.unique(subset=["statistic"]).select("statistic", "population_mean", "between_var", "within_var_pooled").iter_rows(named=True)}
-    reference = {"min_games": min_games, "players": means.height, "metrics": {}}
+    reference = {"min_games": min_games, "players": means.height, "games": game.height, "metrics": {},
+                 "band": band, "rank_points": list(band_range(band)) if band else None}
     for name, col, higher in METRICS:
         if col not in means.columns:
             continue
@@ -147,6 +160,32 @@ def shrink_with_prior(reference: dict, name: str, raw_mean: float, games: int) -
     return mu + factor * (raw_mean - mu), factor
 
 
+def load_references(path: Path) -> list[dict]:
+    """One reference JSON, or every ``*.json`` in a directory (band references plus a fallback)."""
+    path = Path(path)
+    files = sorted(path.glob("*.json")) if path.is_dir() else [path]
+    refs = []
+    for file in files:
+        ref = json.loads(file.read_text())
+        ref["source"] = file.stem
+        refs.append(ref)
+    if not refs:
+        raise SystemExit(f"no reference JSON found at {path}")
+    return refs
+
+
+def pick_reference(references: list[dict], game_rank: float | None) -> dict:
+    """The band reference containing ``game_rank``; otherwise the first reference without a band."""
+    band = band_of(game_rank)
+    for ref in references:
+        if band and ref.get("band") == band:
+            return ref
+    for ref in references:
+        if not ref.get("band"):
+            return ref
+    return references[0]
+
+
 def percentile(reference: dict, name: str, value: float) -> float | None:
     entry = reference["metrics"].get(name)
     if entry is None or value is None:
@@ -155,34 +194,55 @@ def percentile(reference: dict, name: str, value: float) -> float | None:
     return float(np.searchsorted(arr, value, side="right") / len(arr) * 100)
 
 
+def load_game_ranks(meta_path: Path | None, raw: Path) -> pl.DataFrame | None:
+    """Player-game rows (with ``rank_points``) from a ballchasing metadata file next to the replays."""
+    from .meta import load_player_games
+    path = Path(meta_path) if meta_path else Path(raw) / "metadata.json"
+    if not path.exists():
+        return None
+    return load_player_games(path)
+
+
 def score_folder(raw: Path, out: Path, *, models_dir: Path, reference_path: Path, workers=None, limit: int = 0,
-                 focus: str | None = None) -> dict:
+                 focus: str | None = None, meta_path: Path | None = None) -> dict:
     out.mkdir(parents=True, exist_ok=True)
     heads, frames, touches, failures = parse_folder(raw, workers=workers, limit=limit)
     if frames.height == 0:
         raise SystemExit(f"no replays parsed from {raw} ({len(failures)} failures)")
+    meta_table = load_game_ranks(meta_path, raw)
+    if meta_table is not None:
+        touches = attach_game_rank(touches, meta_table)
     scored = apply_models(touches, models_dir)
     table = per_game_table(frames, scored, heads)
+    if meta_table is not None:
+        table = attach_game_rank(table, meta_table)
     table.write_parquet(out / "player_game.parquet")
     scored.write_parquet(out / "touches_scored.parquet")
-    reference = json.loads(Path(reference_path).read_text())
+    references = load_references(reference_path)
     columns = [c for _, c, _ in METRICS if c in table.columns]
+    rank_aggs = [pl.col("game_rank").median().alias("median_game_rank")] if "game_rank" in table.columns else []
     players = (table.group_by("player_id").agg(pl.len().alias("games"), pl.col("frame_player_name").last().alias("name"),
-                                              pl.col("won").mean().alias("win_rate"),
+                                              pl.col("won").mean().alias("win_rate"), *rank_aggs,
                                               *[pl.col(c).mean().alias(c) for c in columns])
                     .sort("games", descending=True))
-    report = {"replays": len(heads), "failures": failures, "players": []}
+    report = {"replays": len(heads), "failures": failures, "ranks_known": meta_table is not None,
+              "references": [{"source": r["source"], "band": r.get("band"), "players": r.get("players")} for r in references],
+              "players": []}
     for row in players.iter_rows(named=True):
-        entry = {"player_id": row["player_id"], "name": row["name"], "games": row["games"], "win_rate": row["win_rate"], "metrics": {}}
+        game_rank = row.get("median_game_rank")
+        reference = pick_reference(references, game_rank)
+        entry = {"player_id": row["player_id"], "name": row["name"], "games": row["games"], "win_rate": row["win_rate"],
+                 "median_game_rank": game_rank, "band": band_of(game_rank), "reference": reference["source"],
+                 "reference_band": reference.get("band"), "metrics": {}}
         for name, col, _ in METRICS:
             if col not in columns:
                 continue
-            # Shrink toward the GC+ population with its variances, so a handful of games cannot
+            # Shrink toward the reference population with its variances, so a handful of games cannot
             # produce an extreme number; percentiles are taken on the shrunk mean.
             shrunk_mean, factor = shrink_with_prior(reference, name, row[col], row["games"])
             entry["metrics"][name] = {"raw": row[col], "shrunk": shrunk_mean, "shrink_factor": factor,
-                                      "gc_percentile": percentile(reference, name, shrunk_mean),
-                                      "gc_median": reference["metrics"].get(name, {}).get("quantiles", {}).get("0.5")}
+                                      "ref_percentile": percentile(reference, name, shrunk_mean),
+                                      "ref_median": reference["metrics"].get(name, {}).get("quantiles", {}).get("0.5")}
         report["players"].append(entry)
     (out / "report.json").write_text(json.dumps(report, indent=1, default=str))
     text = to_markdown(report, focus=focus)
@@ -192,23 +252,31 @@ def score_folder(raw: Path, out: Path, *, models_dir: Path, reference_path: Path
 
 
 def to_markdown(report: dict, *, focus: str | None = None, max_players: int = 6) -> str:
+    refs = ", ".join(f"{r['source']} ({r['band'] or 'all ranks'}, {r['players']} players)" for r in report.get("references", []))
     lines = [f"Scored {report['replays']} replays ({len(report['failures'])} failed to parse). "
-             "Shrunk values pull each player's mean toward the GC+ population in proportion to how noisy the "
-             "statistic is and how few games were seen; percentiles are of the shrunk value against GC+ "
-             "ranked-doubles players with 30+ games. The models are calibrated on that population, so treat "
-             "absolute xG/threat values at other ranks as relative, not literal.", ""]
+             "Each player is compared with the reference population for the band they played in "
+             f"(median match rank); references: {refs}. Shrunk values pull each player's mean toward that "
+             "population in proportion to how noisy the statistic is and how few games were seen; percentiles are "
+             "of the shrunk value. "
+             + ("Match ranks came from the metadata next to the replays, so xG and threat are conditioned on the level "
+                "of play." if report.get("ranks_known") else
+                "No metadata.json was found next to the replays, so match ranks are unknown: the models fall back to "
+                "their default rank path and the all-ranks reference is used."), ""]
     players = report["players"]
     if focus:
         players = [p for p in players if focus.lower() in (p["name"] or "").lower() or focus in p["player_id"]] + \
                   [p for p in players if not (focus.lower() in (p["name"] or "").lower() or focus in p["player_id"])]
     for p in players[:max_players]:
-        lines += [f"## {p['name']} ({p['player_id']}), {p['games']} games, win rate {p['win_rate']:.2f}", "",
-                  "| metric (per game) | raw | shrunk | GC+ median | GC+ percentile |", "|---|---|---|---|---|"]
+        rank = f", median match rank {p['median_game_rank']:.1f} ({p['band']})" if p.get("median_game_rank") is not None else ""
+        ref = p.get("reference_band") or "all ranks"
+        lines += [f"## {p['name']} ({p['player_id']}), {p['games']} games, win rate {p['win_rate']:.2f}{rank}; "
+                  f"reference: {p.get('reference')} ({ref})", "",
+                  f"| metric (per game) | raw | shrunk | {ref} median | {ref} percentile |", "|---|---|---|---|---|"]
         for name, m in p["metrics"].items():
             if m["raw"] is None:
                 continue
-            pct = f"{m['gc_percentile']:.0f}" if m["gc_percentile"] is not None else "-"
-            med = f"{m['gc_median']:.3f}" if m["gc_median"] is not None else "-"
+            pct = f"{m['ref_percentile']:.0f}" if m["ref_percentile"] is not None else "-"
+            med = f"{m['ref_median']:.3f}" if m["ref_median"] is not None else "-"
             lines.append(f"| {name} | {m['raw']:.3f} | {m['shrunk']:.3f} | {med} | {pct} |")
         lines.append("")
     if len(players) > max_players:

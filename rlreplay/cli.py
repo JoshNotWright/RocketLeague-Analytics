@@ -189,11 +189,18 @@ def cmd_touches(args):
           f"{len(failures)} failures, {time.time() - started:.0f}s")
 
 
-def cmd_xg(args):
+def _read_many(paths):
+    """Concatenate several parquet files (comma-separated or repeated flags) into one frame."""
     import polars as pl
+    files = [p for item in paths for p in str(item).split(",") if p]
+    frames = [pl.read_parquet(p) for p in files]
+    return frames[0] if len(frames) == 1 else pl.concat(frames, how="diagonal_relaxed")
+
+
+def cmd_xg(args):
     from . import xg
-    touches = pl.read_parquet(args.touches)
-    table = pl.read_parquet(args.table)
+    touches = _read_many(args.touches)
+    table = _read_many(args.table)
     report = xg.run(touches, table, Path(args.out), train_end=args.train_end, valid_end=args.valid_end)
     print(report["markdown"])
 
@@ -282,21 +289,25 @@ def cmd_decisions_fit(args):
 def cmd_build_reference(args):
     import polars as pl
     from .score import build_reference
+    table = _read_many(args.table) if args.table else None
+    frames = args.frames or ["data/features/frame_2v2.parquet"]
     reference = build_reference(pl.read_parquet(Path(args.xg_dir) / "player_game_xg.parquet"),
                                 pl.read_parquet(Path(args.value_dir) / "player_game_value.parquet"),
                                 pl.read_parquet(Path(args.value_dir) / "player_game_saves.parquet"),
-                                pl.read_parquet(args.frames), min_games=args.min_games)
+                                _read_many(frames), min_games=args.min_games, table=table, band=args.band)
     Path(args.out).parent.mkdir(parents=True, exist_ok=True)
     Path(args.out).write_text(json.dumps(reference, indent=0))
-    print(f"{args.out}: {reference['players']} reference players, {len(reference['metrics'])} metrics")
+    print(f"{args.out}: {reference['players']} reference players over {reference['games']} player-games "
+          f"({args.band or 'all ranks'}), {len(reference['metrics'])} metrics")
 
 
 def cmd_score(args):
     from .score import score_folder
     root = Path(__file__).resolve().parent
     report = score_folder(Path(args.raw), Path(args.out), models_dir=Path(args.models),
-                          reference_path=Path(args.reference or root / "reference" / "gcplus_2v2.json"),
-                          workers=args.workers, limit=args.limit, focus=args.focus)
+                          reference_path=Path(args.reference or root / "reference"),
+                          workers=args.workers, limit=args.limit, focus=args.focus,
+                          meta_path=Path(args.meta) if args.meta else None)
     print(report["markdown"])
 
 
@@ -380,7 +391,8 @@ def main(argv=None):
     p = sub.add_parser("touches"); p.add_argument("--raw", required=True); p.add_argument("--out", required=True)
     p.add_argument("--workers", type=int, default=None); p.add_argument("--limit", type=int, default=0)
     p.set_defaults(func=cmd_touches)
-    p = sub.add_parser("xg"); p.add_argument("--touches", required=True); p.add_argument("--table", required=True)
+    p = sub.add_parser("xg"); p.add_argument("--touches", required=True, action="append", help="repeatable or comma-separated")
+    p.add_argument("--table", required=True, action="append", help="repeatable or comma-separated; rank_points gives the game_rank feature")
     p.add_argument("--out", required=True); p.add_argument("--train-end", required=True); p.add_argument("--valid-end", required=True)
     p.set_defaults(func=cmd_xg)
     p = sub.add_parser("value"); p.add_argument("--touches-scored", required=True); p.add_argument("--out", required=True)
@@ -401,12 +413,18 @@ def main(argv=None):
     p.add_argument("--decision-points-only", action="store_true")
     p.set_defaults(func=cmd_decisions_fit)
     p = sub.add_parser("build-reference"); p.add_argument("--xg-dir", default="reports/v2-xg")
-    p.add_argument("--value-dir", default="reports/v2-value"); p.add_argument("--frames", default="data/features/frame_2v2.parquet")
+    p.add_argument("--value-dir", default="reports/v2-value")
+    p.add_argument("--frames", default=None, action="append", help="repeatable or comma-separated (default data/features/frame_2v2.parquet)")
+    p.add_argument("--table", default=None, action="append", help="player-game table(s) with rank_points; needed with --band")
+    p.add_argument("--band", default=None, choices=("platinum_or_below", "diamond", "champion", "gc"),
+                   help="keep only games whose mean rank falls in this band")
     p.add_argument("--min-games", type=int, default=30); p.add_argument("--out", default="rlreplay/reference/gcplus_2v2.json")
     p.set_defaults(func=cmd_build_reference)
     p = sub.add_parser("score", help="Score any folder of .replay files with the fitted models.")
     p.add_argument("--raw", required=True); p.add_argument("--out", required=True)
-    p.add_argument("--models", default="reports/v2-xg"); p.add_argument("--reference", default=None)
+    p.add_argument("--models", default="reports/v2-xg")
+    p.add_argument("--reference", default=None, help="a reference JSON or a directory of them (default: rlreplay/reference)")
+    p.add_argument("--meta", default=None, help="ballchasing metadata.json with ranks (default: <raw>/metadata.json if present)")
     p.add_argument("--workers", type=int, default=None); p.add_argument("--limit", type=int, default=0)
     p.add_argument("--focus", default=None, help="player name or id to list first")
     p.set_defaults(func=cmd_score)

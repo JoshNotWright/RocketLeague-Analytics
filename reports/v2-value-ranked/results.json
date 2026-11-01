@@ -1,0 +1,44 @@
+{
+ "touches": 1084497,
+ "shots_faced": 68112,
+ "mean_value_added": 0.0022862128104493063,
+ "corr_team_value_vs_goal_diff": 0.7368624456445884,
+ "save_rate": 0.6108027953958186,
+ "mean_xg_faced": 0.3484949233896111,
+ "reliability": {
+  "value_per_game": {
+   "players": 105,
+   "split_half_corr": 0.3699932656013757
+  },
+  "value_per_touch": {
+   "players": 105,
+   "split_half_corr": 0.3559588254375062
+  },
+  "mean_v_now": {
+   "players": 105,
+   "split_half_corr": 0.565998579243223
+  },
+  "touches_per_game": {
+   "players": 105,
+   "split_half_corr": 0.668803027612032
+  },
+  "gsax_per_game": {
+   "players": 101,
+   "split_half_corr": 0.16322117399808833
+  },
+  "gsax_per_shot_faced": {
+   "players": 101,
+   "split_half_corr": 0.10768110199056129
+  },
+  "shots_faced_per_game": {
+   "players": 101,
+   "split_half_corr": 0.5521598782876047
+  },
+  "xg_faced_per_shot": {
+   "players": 101,
+   "split_half_corr": 0.27879039174328724
+  }
+ },
+ "gsax_z_variance_ratio": 3.00078918354244,
+ "gsax_defenders": 108
+}

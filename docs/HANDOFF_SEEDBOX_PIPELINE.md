@@ -11,14 +11,20 @@ band player-stage crawl is done.
   GC tier rate (2 files/s, roughly 170k replays/day), pushes to the homelab, and is deleted
   by one command. The server holds no state that matters: the ledger lives on the homelab
   and is pulled on boot, pushed on shutdown. Every band, monthly windows, resumable.
+- **Disk is the server's local NVMe, no attached volume.** A batch is pushed and validated
+  every N replays (default 20,000: about 22 GB raw + 6 GB decoded), not once a day, so the
+  box never holds more than a batch or two. A full day at rate would be ~190 GB raw, which
+  is why the batch, not the day, is the unit. Pick a plan whose disk comfortably holds two
+  batches; the cleanup frees each batch as soon as the lab validates it.
 - **Decode wide.** Before the big crawl starts, add every cheap field boxcars exposes that
   we currently drop (boost pickups per pad, car body, camera settings, anything else that
   is free to read), so the decoded arrays are a superset of what any current or likely
   model needs. This is the one irreversible choice: raws are not kept long term.
-- **Retention on the box.** Raw and decoded files stay for the day. After the homelab
-  validates the day's push, the box deletes that batch's raws and decoded files and keeps
+- **Retention on the box.** Raw and decoded files stay until their batch is pushed and the
+  homelab validates it; then the box deletes that batch's raws and decoded files and keeps
   only the metadata jsonl files and crawl state, which are pushed too. A failed validation
-  leaves everything in place and the next night retries. The teardown command refuses to
+  leaves the batch in place and it is retried after the next batch; the crawler pauses if
+  unvalidated batches would exceed the disk. The teardown command refuses to
   delete the server while any batch is unvalidated. Nothing is deleted that the lab has
   not confirmed.
 - **Ledger** = the metadata jsonl files (a few hundred bytes per replay). They are the
@@ -55,8 +61,9 @@ scripts/crawler_down.sh   # push, validate, delete server (refuses if a batch is
    never echoed. A systemd unit uses it as `EnvironmentFile`.
 3. Pulls the ledger (`meta/` and `crawl_state.json` files) from the homelab with rclone.
 4. Starts `rlreplay-crawler.service`, which loops: crawl window -> decode batch -> manifest
-   -> push -> (lab validates) -> cleanup, until the configured window list is exhausted or
-   the service is stopped. A `crawler_status.sh` prints progress over SSH.
+   -> push -> (lab validates) -> cleanup, in batches of N replays, until the configured
+   window list is exhausted or the service is stopped. A `crawler_status.sh` prints
+   progress over SSH.
 
 `crawler_down.sh`:
 1. Stops the service, runs one final push and waits for validation.

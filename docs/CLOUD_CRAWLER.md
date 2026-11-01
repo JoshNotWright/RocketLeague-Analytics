@@ -62,6 +62,8 @@ guard are all polled between pages: a stop seals, pushes, waits for validation a
 
 ## Setup, once
 
+The full walk-through, from accounts to the first run, is [DEPLOYMENT.md](DEPLOYMENT.md).
+
 1. Lab: install Tailscale, `hcloud`, `rclone`, Python 3; clone this repo to `/opt/rlreplay`; run
    `sudo scripts/lab_setup.sh --root /tank/rl`. It creates the `rlreplay` user and the tree,
    generates the box-to-lab key (restricted in `authorized_keys` to the tailnet, SFTP and the

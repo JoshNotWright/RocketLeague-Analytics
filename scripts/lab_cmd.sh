@@ -5,7 +5,7 @@ set -euo pipefail
 cmd="${SSH_ORIGINAL_COMMAND:-}"
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
 case "$cmd" in
-    "internal-sftp"|"/usr/lib/openssh/sftp-server"|"/usr/libexec/openssh/sftp-server"|"sftp-server"|"/usr/lib/ssh/sftp-server")
+    "sftp"|"internal-sftp"|"/usr/lib/openssh/sftp-server"|"/usr/libexec/openssh/sftp-server"|"sftp-server"|"/usr/lib/ssh/sftp-server")
         exec /usr/lib/openssh/sftp-server ;;
     "python3 $REPO/scripts/lab_validate.py "*)
         # shellcheck disable=SC2086

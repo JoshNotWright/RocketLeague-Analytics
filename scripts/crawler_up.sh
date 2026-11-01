@@ -53,7 +53,7 @@ type = sftp
 host = $LAB_TS_HOST
 user = $LAB_USER
 key_file = /etc/rlreplay/lab_key
-shell_type = unix
+shell_type = none
 EOF
 render_crawler_config | bootstrap_ssh "$IP" 'umask 077 && cat > /etc/rlreplay/crawler.json'
 

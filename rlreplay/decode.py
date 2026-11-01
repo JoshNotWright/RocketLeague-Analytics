@@ -15,6 +15,8 @@ happens once per replay instead of once per product, and label changes no longer
 from __future__ import annotations
 
 import json
+import os
+import subprocess
 from pathlib import Path
 
 import numpy as np
@@ -22,6 +24,16 @@ import numpy as np
 from .events import PLATFORMS
 from .header import header_summary, parse
 from .stream import iter_snapshots
+
+_ROOT = Path(__file__).resolve().parent.parent
+RLDECODE_EXE = _ROOT / "tools" / "rldecode.exe"
+# Module-level switch for the Rust decoder (rust/rldecode, built to tools/rldecode.exe). It
+# writes the same .npz as `save` about 10x faster; `RLREPLAY_NO_RUST=1` forces the Python path.
+USE_RUST = True
+
+
+def use_rust() -> bool:
+    return USE_RUST and not os.environ.get("RLREPLAY_NO_RUST") and RLDECODE_EXE.exists()
 
 
 def _player_id(player) -> str | None:
@@ -115,8 +127,60 @@ def decode_one(path: str, out_dir: str):
     target = Path(out_dir) / f"{replay_id}.npz"
     if target.exists():
         return replay_id, "cached", None
+    if use_rust():
+        completed = subprocess.run([str(RLDECODE_EXE), str(path), str(out_dir), "--replay-id", replay_id],
+                                   capture_output=True, timeout=300)
+        if completed.returncode == 0 and target.exists():
+            return replay_id, "ok", None
+        # Fall through to the Python path so a Rust-side failure never loses a replay that
+        # rrrocket can still parse; the Python error (if any) is the one reported.
+    return _decode_one_python(path, out_dir, replay_id)
+
+
+def _decode_one_python(path: str, out_dir: str, replay_id: str):
+    target = Path(out_dir) / f"{replay_id}.npz"
     try:
         save(decode_replay(path, replay_id=replay_id), target)
         return replay_id, "ok", None
     except Exception as exc:  # noqa: BLE001
         return replay_id, "failed", f"{type(exc).__name__}: {str(exc)[:200]}"
+
+
+def decode_batch(paths, out_dir: str):
+    """Decode many replays in one rldecode process (saves ~70 ms of process start-up each on
+    Windows). Yields (replay_id, status, error) like `decode_one`; replays the Rust decoder
+    rejects are retried on the Python path. Without the binary this is just a loop over
+    `decode_one`."""
+    paths = [str(p) for p in paths]
+    pending = []
+    for path in paths:
+        replay_id = Path(path).stem
+        if (Path(out_dir) / f"{replay_id}.npz").exists():
+            yield replay_id, "cached", None
+        else:
+            pending.append((path, replay_id))
+    if not pending:
+        return
+    if not use_rust():
+        for path, replay_id in pending:
+            yield _decode_one_python(path, out_dir, replay_id)
+        return
+    Path(out_dir).mkdir(parents=True, exist_ok=True)
+    by_id = dict((rid, p) for p, rid in pending)
+    proc = subprocess.run([str(RLDECODE_EXE), "--batch", str(out_dir)], capture_output=True, text=True,
+                          encoding="utf-8", errors="replace",
+                          input="".join(f"{p}\t{rid}\n" for p, rid in pending))
+    seen = set()
+    for line in proc.stdout.splitlines():
+        parts = line.split("\t")
+        if len(parts) < 2 or parts[0] not in ("ok", "failed"):
+            continue
+        status, replay_id = parts[0], parts[1]
+        seen.add(replay_id)
+        if status == "ok" and (Path(out_dir) / f"{replay_id}.npz").exists():
+            yield replay_id, "ok", None
+        else:
+            yield _decode_one_python(by_id[replay_id], out_dir, replay_id)
+    for replay_id, path in by_id.items():  # the process died before reporting these
+        if replay_id not in seen:
+            yield _decode_one_python(path, out_dir, replay_id)

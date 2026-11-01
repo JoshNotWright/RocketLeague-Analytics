@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import time
 from concurrent.futures import ProcessPoolExecutor, as_completed
@@ -212,23 +213,43 @@ def cmd_value(args):
     print(report["markdown"])
 
 
+def _decode_chunk(paths, out_dir):
+    from .decode import decode_batch
+    return list(decode_batch(paths, out_dir))
+
+
 def cmd_decode(args):
-    """Decode every replay once to compact arrays (data/decoded/<mode>/<id>.npz)."""
-    from .decode import decode_one
+    """Decode every replay once to compact arrays (data/decoded/<mode>/<id>.npz).
+
+    With tools/rldecode.exe present each worker feeds a chunk of replays to one Rust process
+    (`decode.decode_batch`); otherwise each replay goes through the Python path."""
+    from .decode import decode_one, use_rust
     paths = sorted(str(p) for p in Path(args.raw).glob("*.replay"))
     if args.limit:
         paths = paths[:args.limit]
     Path(args.out).mkdir(parents=True, exist_ok=True)
     started, counts, failures = time.time(), {"ok": 0, "cached": 0, "failed": 0}, {}
+    n = 0
+
+    def record(replay_id, status, error):
+        nonlocal n
+        n += 1
+        counts[status] += 1
+        if error:
+            failures[replay_id] = error
+        if n % 200 == 0:
+            print(f"{n}/{len(paths)} decoded ({counts}), {time.time() - started:.0f}s", flush=True)
+
     with ProcessPoolExecutor(max_workers=args.workers) as pool:
-        futures = [pool.submit(decode_one, p, args.out) for p in paths]
-        for n, future in enumerate(as_completed(futures), 1):
-            replay_id, status, error = future.result()
-            counts[status] += 1
-            if error:
-                failures[replay_id] = error
-            if n % 200 == 0:
-                print(f"{n}/{len(paths)} decoded ({counts}), {time.time() - started:.0f}s", flush=True)
+        if use_rust():
+            size = max(1, min(50, len(paths) // max(1, (args.workers or os.cpu_count() or 4) * 4) or 1))
+            chunks = [paths[i:i + size] for i in range(0, len(paths), size)]
+            for future in as_completed([pool.submit(_decode_chunk, c, args.out) for c in chunks]):
+                for result in future.result():
+                    record(*result)
+        else:
+            for future in as_completed([pool.submit(decode_one, p, args.out) for p in paths]):
+                record(*future.result())
     Path(args.out, "_failures.json").write_text(json.dumps(failures, indent=1))
     print(f"{args.out}: {counts}, {time.time() - started:.0f}s")
 
@@ -278,11 +299,12 @@ def cmd_decisions_build(args):
 
 
 def cmd_decisions_fit(args):
-    import polars as pl
     from .decisions import fit_policy
-    report = fit_policy(args.frames, pl.read_parquet(args.table), args.out, train_end=args.train_end,
+    frames = [p for item in args.frames for p in str(item).split(",") if p]
+    report = fit_policy(frames if len(frames) > 1 else frames[0], _read_many(args.table), args.out, train_end=args.train_end,
                         valid_end=args.valid_end, sample_rows=args.sample_rows,
-                        decision_points_only=args.decision_points_only)
+                        decision_points_only=args.decision_points_only, rank_features=not args.no_rank,
+                        gc_rank=args.gc_rank)
     print(report["markdown"])
 
 
@@ -419,10 +441,14 @@ def main(argv=None):
     p.add_argument("--hz", type=float, default=5.0); p.add_argument("--horizon", type=float, default=1.0)
     p.add_argument("--workers", type=int, default=None); p.add_argument("--limit", type=int, default=0)
     p.set_defaults(func=cmd_decisions_build)
-    p = sub.add_parser("decisions-fit"); p.add_argument("--frames", required=True); p.add_argument("--table", required=True)
+    p = sub.add_parser("decisions-fit")
+    p.add_argument("--frames", required=True, action="append", help="decision parquet folder(s); repeatable or comma-separated")
+    p.add_argument("--table", required=True, action="append", help="player-game table(s) with played_at and rank_points")
     p.add_argument("--out", required=True); p.add_argument("--train-end", required=True); p.add_argument("--valid-end", required=True)
     p.add_argument("--sample-rows", type=int, default=3_000_000)
     p.add_argument("--decision-points-only", action="store_true")
+    p.add_argument("--no-rank", action="store_true", help="leave the player's and match's rank out of the policy")
+    p.add_argument("--gc-rank", type=float, default=80.0, help="rank points used for the GC counterfactual")
     p.set_defaults(func=cmd_decisions_fit)
     p = sub.add_parser("build-reference"); p.add_argument("--xg-dir", default="reports/v2-xg")
     p.add_argument("--value-dir", default="reports/v2-value")

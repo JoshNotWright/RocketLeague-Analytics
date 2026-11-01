@@ -31,8 +31,22 @@ STATE_FEATURES = (
        for f in ("x", "y", "z", "vx", "vy", "vz", "speed", "boost", "dist_ball", "ahead_of_ball")]
     + ["closing_speed", "time_to_ball"]
 )
+RANK_FEATURES = ["me_rank", "game_rank"]  # joined at fit time from the player-game table (meta.rank_points)
+GC_RANK = 80.0  # GC2 div 1 on the rank-points scale: the counterfactual "what would a GC player do here"
 RETREAT_UU = 1000.0
 TOUCH_RADIUS = 350.0
+
+
+def attach_ranks(lazy, table):
+    """Join the player's own rank points (``me_rank``) and the match mean (``game_rank``) onto decision rows."""
+    import polars as pl
+
+    if "rank_points" not in table.columns:
+        return lazy.with_columns(pl.lit(None, dtype=pl.Float64).alias("me_rank"), pl.lit(None, dtype=pl.Float64).alias("game_rank"))
+    own = (table.select("replay_id", "player_id", pl.col("rank_points").cast(pl.Float64).alias("me_rank"))
+                .unique(subset=["replay_id", "player_id"]))
+    game = table.group_by("replay_id").agg(pl.col("rank_points").cast(pl.Float64).mean().alias("game_rank"))
+    return lazy.join(own.lazy(), on=["replay_id", "player_id"], how="left").join(game.lazy(), on="replay_id", how="left")
 
 
 def _flip(v, sign):
@@ -165,12 +179,18 @@ PARAMS = {"objective": "multiclass", "num_class": len(ACTIONS), "learning_rate":
 
 
 def fit_policy(frames_dir, table, out, *, train_end: str, valid_end: str, sample_rows: int = 3_000_000, seed: int = 7,
-               decision_points_only: bool = False) -> dict:
+               decision_points_only: bool = False, rank_features: bool = True, gc_rank: float = GC_RANK) -> dict:
     """Fit the behavioural policy on a date split and score per-player decision similarity.
 
     With ``decision_points_only`` rows whose outcome is already determined by momentum (closing
     on the ball within half the horizon, or already moving fast along the pitch) are dropped,
     so the model predicts choices rather than continuations.
+
+    With ``rank_features`` the player's own rank and the match's mean rank (from ``table``) are
+    model inputs, so one policy spans the ladder. Held-out rows are then also scored under the
+    counterfactual "same state, GC player" (both ranks set to ``gc_rank``): the GC gap per
+    player-game is how much less likely that policy finds the player's actual choices than the
+    policy at their own rank, and the action matrix says where the two disagree.
     """
     import json
     from pathlib import Path
@@ -184,7 +204,10 @@ def fit_policy(frames_dir, table, out, *, train_end: str, valid_end: str, sample
     out = Path(out)
     out.mkdir(parents=True, exist_ok=True)
     dates = table.select("replay_id", "played_at").unique(subset=["replay_id"])
-    lazy = pl.scan_parquet(str(Path(frames_dir) / "*.parquet")).join(dates.lazy(), on="replay_id", how="inner")
+    dirs = [frames_dir] if isinstance(frames_dir, (str, Path)) else list(frames_dir)
+    lazy = pl.scan_parquet([str(Path(d) / "*.parquet") for d in dirs]).join(dates.lazy(), on="replay_id", how="inner")
+    if rank_features:
+        lazy = attach_ranks(lazy, table)
     if decision_points_only:
         lazy = lazy.filter(pl.col("decision_point"))
     a, b = _utc(train_end), _utc(valid_end)
@@ -199,6 +222,9 @@ def fit_policy(frames_dir, table, out, *, train_end: str, valid_end: str, sample
     valid = df.filter((pl.col("played_at") >= a) & (pl.col("played_at") < b))
     test = df.filter(pl.col("played_at") >= b)
     features = [f for f in STATE_FEATURES if f in df.columns]
+    if rank_features:
+        features += [f for f in RANK_FEATURES if f in df.columns and df[f].null_count() < df.height]
+    ranked = rank_features and "me_rank" in features
 
     def mat(d):
         return d.select([pl.col(f).cast(pl.Float64) for f in features]).to_numpy()
@@ -227,35 +253,80 @@ def fit_policy(frames_dir, table, out, *, train_end: str, valid_end: str, sample
     # Per-player decision similarity on held-out games: mean log-likelihood of the chosen action.
     test = test.with_columns(pl.Series("loglik", np.log(np.clip(p[np.arange(len(y)), y], 1e-9, 1))),
                              pl.Series("p_challenge", p[:, ACTIONS.index("challenge")]))
-    per_game = (test.group_by("replay_id", "player_id", "player_name", "played_at")
-                    .agg(pl.len().alias("frames"), pl.col("loglik").mean().alias("decision_loglik"),
-                         (pl.col("action") == "challenge").mean().alias("challenge_rate"),
-                         pl.col("p_challenge").mean().alias("policy_challenge_rate")))
+    aggs = [pl.len().alias("frames"), pl.col("loglik").mean().alias("decision_loglik"),
+            (pl.col("action") == "challenge").mean().alias("challenge_rate"),
+            pl.col("p_challenge").mean().alias("policy_challenge_rate")]
+    counterfactual = None
+    if ranked:
+        # Same states, GC player: both rank inputs set to gc_rank. The GC gap is the extra surprise
+        # of the player's actual choices under that policy; the action matrix says where it disagrees.
+        gc_test = test.with_columns(pl.lit(gc_rank).alias("me_rank"), pl.lit(gc_rank).alias("game_rank"))
+        p_gc = booster.predict(mat(gc_test), num_iteration=booster.best_iteration)
+        gc_argmax = p_gc.argmax(axis=1)
+        test = test.with_columns(pl.Series("loglik_gc", np.log(np.clip(p_gc[np.arange(len(y)), y], 1e-9, 1))),
+                                 pl.Series("gc_action", [ACTIONS[k] for k in gc_argmax]),
+                                 pl.Series("p_gc_challenge", p_gc[:, ACTIONS.index("challenge")]),
+                                 pl.col("me_rank").alias("me_rank_row"))
+        aggs += [(pl.col("loglik") - pl.col("loglik_gc")).mean().alias("gc_gap"),
+                 pl.col("p_gc_challenge").mean().alias("gc_policy_challenge_rate"),
+                 ((pl.col("action") == "retreat") & (pl.col("gc_action") == "challenge")).mean().alias("retreat_where_gc_challenges"),
+                 ((pl.col("action") == "challenge") & (pl.col("gc_action") != "challenge")).mean().alias("challenge_where_gc_would_not"),
+                 pl.col("me_rank_row").mean().alias("me_rank")]
+        matrix = (test.group_by("action", "gc_action").len().sort("action", "gc_action"))
+        by_band = (test.with_columns((pl.col("me_rank_row") // 12 * 12).alias("rank_bin"))
+                       .group_by("rank_bin").agg(pl.len().alias("rows"), (pl.col("loglik") - pl.col("loglik_gc")).mean().alias("gc_gap"),
+                                                 (pl.col("action") == "challenge").mean().alias("challenge_rate"),
+                                                 pl.col("p_gc_challenge").mean().alias("gc_policy_challenge_rate"))
+                       .sort("rank_bin"))
+        counterfactual = {"gc_rank": gc_rank,
+                          "action_matrix": {f"{r['action']}->{r['gc_action']}": int(r["len"]) for r in matrix.iter_rows(named=True)},
+                          "by_rank_bin": [{k: (float(v) if isinstance(v, float) else v) for k, v in r.items()} for r in by_band.iter_rows(named=True)]}
+    per_game = test.group_by("replay_id", "player_id", "player_name", "played_at").agg(*aggs)
     per_game.write_parquet(out / "player_game_decisions.parquet")
     from .xg import split_half
     reliability = {"decision_loglik": split_half(per_game, "decision_loglik", min_games=10),
                    "challenge_rate": split_half(per_game, "challenge_rate", min_games=10),
                    "challenge_minus_policy": split_half(per_game.with_columns((pl.col("challenge_rate") - pl.col("policy_challenge_rate")).alias("d")), "d", min_games=10)}
-    players = (per_game.group_by("player_id", "player_name").agg(pl.len().alias("games"), pl.col("decision_loglik").mean(),
-                                                                 pl.col("challenge_rate").mean(), pl.col("policy_challenge_rate").mean())
+    if ranked:
+        reliability["gc_gap"] = split_half(per_game, "gc_gap", min_games=10)
+        reliability["retreat_where_gc_challenges"] = split_half(per_game, "retreat_where_gc_challenges", min_games=10)
+        reliability["challenge_where_gc_would_not"] = split_half(per_game, "challenge_where_gc_would_not", min_games=10)
+    player_aggs = [pl.len().alias("games"), pl.col("decision_loglik").mean(), pl.col("challenge_rate").mean(), pl.col("policy_challenge_rate").mean()]
+    if ranked:
+        player_aggs += [pl.col("gc_gap").mean(), pl.col("retreat_where_gc_challenges").mean(),
+                        pl.col("challenge_where_gc_would_not").mean(), pl.col("me_rank").mean()]
+    players = (per_game.group_by("player_id", "player_name").agg(*player_aggs)
                        .filter(pl.col("games") >= 10).sort("decision_loglik", descending=True))
     players.write_parquet(out / "player_decisions.parquet")
-    report = {"decision_points_only": decision_points_only,
+    report = {"decision_points_only": decision_points_only, "rank_features": ranked,
               "rows": {"total_available": total, "sampled": df.height, "train": train.height, "valid": valid.height, "test": test.height},
               "best_iteration": int(booster.best_iteration), "test_logloss": ll_model, "prior_logloss": ll_prior,
               "accuracy": acc, "prior_accuracy": float(prior.max()), "per_class": per_class, "importances": importances,
-              "reliability": reliability}
+              "reliability": reliability, "counterfactual": counterfactual}
     lines = [f"Decision policy (5 actions, {len(features)} state features{', decision points only' if decision_points_only else ''}). "
              f"Rows: {total} available, {df.height} sampled, "
              f"train {train.height} / valid {valid.height} / test {test.height}; {booster.best_iteration} rounds.", "",
              f"Held-out log loss {ll_model:.4f} vs prior {ll_prior:.4f}; accuracy {acc:.3f} vs majority {prior.max():.3f}.", "",
              "| action | share | recall | mean p when true |", "|---|---|---|---|"]
-    lines += [f"| {k} | {v['share']:.3f} | {v['recall']:.3f} | {v['mean_prob_when_true']:.3f} |" for k, v in per_class.items()]
+    def _f(x):
+        return "-" if x is None else f"{x:.3f}"
+    lines += [f"| {k} | {_f(v['share'])} | {_f(v['recall'])} | {_f(v['mean_prob_when_true'])} |" for k, v in per_class.items()]
     lines += ["", "Top features: " + ", ".join(f"{i['feature']} ({i['gain_share']:.2f})" for i in importances[:10]), "",
               "Split-half reliability of per-player decision statistics (held-out games, 10+ games):", "",
               "| statistic | players | correlation |", "|---|---|---|"]
     lines += [f"| {k} | {v['players']} | {v['split_half_corr']:.3f} |" for k, v in reliability.items()]
-    lines += ["", "Players by decision log-likelihood under the GC+ policy (held-out games):", "",
+    if counterfactual:
+        lines += ["", f"Counterfactual: the same held-out states scored with both rank inputs set to {gc_rank:.0f} rank points (GC).", "",
+                  "| player rank bin | rows | challenge rate | GC policy challenge rate | GC gap (nats) |", "|---|---|---|---|---|"]
+        lines += [f"| {int(r['rank_bin'])}-{int(r['rank_bin']) + 11} | {r['rows']} | {r['challenge_rate']:.3f} | {r['gc_policy_challenge_rate']:.3f} | {r['gc_gap']:.4f} |"
+                  for r in counterfactual["by_rank_bin"] if r["rank_bin"] is not None]
+        total_rows = sum(counterfactual["action_matrix"].values()) or 1
+        lines += ["", "Actual action -> action the GC-conditioned policy rates most likely (share of held-out rows):", "",
+                  "| actual \\ GC policy | " + " | ".join(ACTIONS) + " |", "|---|" + "---|" * len(ACTIONS)]
+        for actual in ACTIONS:
+            cells = [counterfactual["action_matrix"].get(f"{actual}->{gc}", 0) / total_rows for gc in ACTIONS]
+            lines.append(f"| {actual} | " + " | ".join(f"{c:.3f}" for c in cells) + " |")
+    lines += ["", "Players by decision log-likelihood under the policy at their own rank (held-out games):", "",
               "| player | games | mean loglik | challenge rate | policy challenge rate |", "|---|---|---|---|---|"]
     for row in list(players.head(6).iter_rows(named=True)) + list(players.tail(4).iter_rows(named=True)):
         lines.append(f"| {row['player_name']} | {row['games']} | {row['decision_loglik']:.4f} | {row['challenge_rate']:.3f} | {row['policy_challenge_rate']:.3f} |")

@@ -125,6 +125,50 @@ The decision-point task is genuinely harder than the 1 s continuation task (majo
 overfits quickly (validation loss rises from epoch 4), so regularisation and more replays
 are the obvious next levers; the GPU makes both cheap.
 
+## Third pass: one policy across ranks, and the GC counterfactual
+
+`decisions-fit` now joins each row's own rank points (`me_rank`) and the match's mean rank
+(`game_rank`, from the player-game table) as model inputs, so one policy spans the ladder,
+and scores every held-out decision twice: at the player's own rank and with both rank inputs
+set to 80 (GC2), the same state as if a GC player were in it. Per player-game that gives the
+**GC gap**, the extra surprise (nats) of the player's actual choices under the GC-conditioned
+policy, and two disagreement rates: retreating where the GC policy rates challenge most
+likely, and challenging where it would not. First fit on Kaggle GC+ plus PastorKurt's 2,898
+Diamond-level games (`reports/v2-decisions-ranked`, 8.3M decision points available, 4.0M
+sampled, same date split, test on 578k rows):
+
+| | log loss | accuracy |
+| --- | --- | --- |
+| class prior | 1.545 | 0.275 |
+| rank-conditioned decision-point policy | 0.919 | 0.617 |
+
+Same accuracy as the GC+-only fit; the rank inputs do not change what drives the model
+(own y, ball velocity, boost, closing speed), they let it shift the mix by rank. By rank bin
+on held-out rows, the GC-conditioned policy would challenge more often than Diamond players
+do in the same states (0.215 against an actual 0.198 at rank points 48 to 59), and less
+often than GC players do (0.230 against 0.242); the GC gap at Diamond is 0.023 nats against
+0.012 for GC players scored as GC.
+
+| per-player statistic (held-out games, 78 players) | split-half reliability |
+| --- | --- |
+| GC gap | 0.50 |
+| challenge where the GC policy would not | 0.35 |
+| challenge rate minus own-rank policy | 0.33 |
+| decision log-likelihood (own rank) | 0.16 |
+| retreat where the GC policy challenges | 0.03 |
+
+Read the GC-gap reliability with care: between players it is partly rank itself, since a
+Diamond player has a larger gap by construction, so the within-band version is what matters
+and needs the band corpus. "Retreat where GC challenges" does not persist at all (0.03) and
+happens on under 2% of decision points at every rank, so the headline that lower-rank
+players are too passive is not supported here; what persists is challenging where the GC
+policy would not (0.35), which at Diamond is 6% of decision points against 8% for GC
+players themselves. The Diamond side of this fit is 233 held-out player-games, 109 players,
+dominated by PastorKurt and PastorCamerius (121 and 120 games); their GC gaps are 0.042 and
+0.027 nats with challenge rates 0.181 and 0.201 against an own-rank policy expectation of
+0.187 and 0.189. The band crawl (`scripts/crawl_bands.ps1`, `crawl_band_players.ps1`) is what
+turns this into a statement about Diamond players in general rather than two of them.
+
 ## Reproducing
 
 ```powershell
@@ -140,4 +184,12 @@ The cached path replaces the first command:
 .\.venv\Scripts\python -m rlreplay decisions-build --decoded data/decoded/2v2 --out data/frames/decisions_2v2_h25 --horizon 2.5
 .\.venv\Scripts\python -m rlreplay decisions-fit --frames data/frames/decisions_2v2_h25 --table data/features/player_game_2v2.parquet --out reports/v2-decisions-h25 --train-end 2025-04-01 --valid-end 2025-07-01 --decision-points-only
 .\.venv-torch\Scripts\python -m rlreplay.seqpolicy --frames data/frames/decisions_2v2_h25 --table data/features/player_game_2v2.parquet --out reports/v2-seqpolicy --train-end 2025-04-01 --valid-end 2025-07-01 --replays 1200
+```
+
+Third pass (rank-conditioned, needs the per-source decision datasets and tables):
+
+```powershell
+.\.venv\Scripts\python -m rlreplay decode --raw data/raw/pastorkurt --out data/decoded/pastorkurt
+.\.venv\Scripts\python -m rlreplay decisions-build --decoded data/decoded/pastorkurt --out data/frames/decisions_pastorkurt_h25 --horizon 2.5
+.\.venv\Scripts\python -m rlreplay decisions-fit --frames data/frames/decisions_2v2_h25 --frames data/frames/decisions_pastorkurt_h25 --table data/features/player_game_2v2.parquet --table data/features/player_game_pastorkurt.parquet --out reports/v2-decisions-ranked --train-end 2025-04-01 --valid-end 2025-07-01 --decision-points-only --sample-rows 4000000
 ```

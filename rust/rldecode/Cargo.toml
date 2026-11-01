@@ -1,0 +1,16 @@
+[package]
+name = "rldecode"
+version = "0.1.0"
+edition = "2021"
+description = "Decode a Rocket League .replay straight into the rlreplay .npz arrays (no rrrocket JSON round trip)"
+
+[dependencies]
+boxcars = "=0.13.0"
+serde_json = "=1.0.154"
+ryu = "=1.0.23"
+zip = { version = "=9.2.1", default-features = false, features = ["deflate-flate2-zlib-rs"] }
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1

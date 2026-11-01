@@ -171,6 +171,45 @@ label horizon is now a one-minute rebuild instead of a 25-minute one. The `extra
 `touches` commands also write one parquet per replay from the workers instead of shipping row
 lists back to the parent, and rrrocket output is parsed with orjson when available.
 
+### The Rust decoder (rust/rldecode)
+
+About two thirds of the remaining second per replay was the Python frame walk over
+rrrocket's 20 MB JSON, and most of the rest was producing and parsing that JSON. `rust/rldecode`
+is a small Rust CLI on `boxcars` 0.13.0 (the library rrrocket wraps) that walks the network
+stream in memory and writes the same `<id>.npz` (plus a `<id>.meta.json` sidecar) directly, so
+`decode.load` and everything downstream are unchanged. `src/decode.rs` is a line-for-line port
+of `stream.iter_snapshots` and `decode.decode_json`: actor lifecycle, ball vs car rigid bodies,
+car-to-PRI links, boost in both the byte attribute and the mid-2024 `ReplicatedBoost` struct,
+demolitions from `ReplicatedDemolish*` including `DemolishExtended`, keyframe re-send
+de-duplication, round starts and the clock. Floats are reproduced exactly: where the Python
+path keeps float64 (times, deltas, round starts, the ball-touch threshold, header floats) the
+Rust side recreates Python's value by formatting the f32 with ryu, as rrrocket does, and parsing
+it back, so even tie cases such as 150.578125 come out identical.
+
+Build and install (cargo and the MSVC build tools; from a shell where `vcvars64.bat` has run if
+the linker is not on `PATH`):
+
+```powershell
+cd rust\rldecode
+cargo build --release
+copy target\release\rldecode.exe ..\..\tools\rldecode.exe
+```
+
+`decode.decode_one` uses `tools/rldecode.exe` when it exists and falls back to the Python path
+otherwise (or when `RLREPLAY_NO_RUST=1` is set, or `decode.USE_RUST` is False); a replay the
+Rust decoder rejects is retried on the Python path. `decode.decode_batch` feeds many replays to
+one process (`rldecode --batch`), which matters on Windows where starting a process costs more
+than decoding a replay. `tests/test_rlreplay_rldecode.py` checks five real replays against the
+cached Python output: every array equal bit for bit (float arrays included), every meta key
+equal, identical decision rows; a sweep over 420 replays across the whole date range (June 2024
+to March 2026, Steam, Epic and PlayStation ids, 2,500 demolitions) found no difference either.
+
+Measured on 20 replays, single core, with the ballchasing crawl running in the background:
+Python path 939 ms per replay; Rust through `decode_one` (one process per replay) 86 ms, 10.9x;
+Rust batch mode 66 ms, 14x. Inside the binary a replay takes about 12 ms to parse, 15 ms to
+walk and 30 ms to deflate (level 6, the same size as numpy's output; `RLDECODE_ZLEVEL=1`
+halves the write time for 23% larger files). `RLDECODE_TIMING=1` prints that breakdown.
+
 ### Rank bands and the band crawl
 
 `scripts/crawl_bands.ps1` crawls Diamond, Champion and GC ranked doubles in monthly windows

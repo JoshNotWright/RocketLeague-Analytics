@@ -1,0 +1,212 @@
+{
+ "decision_points_only": true,
+ "rank_features": true,
+ "rows": {
+  "total_available": 8261970,
+  "sampled": 3999065,
+  "train": 3130995,
+  "valid": 290024,
+  "test": 578046
+ },
+ "best_iteration": 2000,
+ "test_logloss": 0.9188804656200598,
+ "prior_logloss": 1.5449592655835838,
+ "accuracy": 0.6167657937257589,
+ "prior_accuracy": 0.2748129588198001,
+ "per_class": {
+  "challenge": {
+   "share": 0.23576670368794178,
+   "recall": 0.680997035602125,
+   "mean_prob_when_true": 0.5368457758480285
+  },
+  "big_pad": {
+   "share": 0.07181435387495112,
+   "recall": 0.22988533436114858,
+   "mean_prob_when_true": 0.2522001938168347
+  },
+  "retreat": {
+   "share": 0.2282776803230193,
+   "recall": 0.7623053313629646,
+   "mean_prob_when_true": 0.5942700284982622
+  },
+  "advance": {
+   "share": 0.20956463672441294,
+   "recall": 0.6256913602668032,
+   "mean_prob_when_true": 0.5179627422017364
+  },
+  "hold": {
+   "share": 0.25457662538967485,
+   "recall": 0.5285647301861277,
+   "mean_prob_when_true": 0.43058922876564537
+  }
+ },
+ "importances": [
+  {
+   "feature": "me_y",
+   "gain_share": 0.1532231358129503
+  },
+  {
+   "feature": "ball_vy",
+   "gain_share": 0.06949094353843083
+  },
+  {
+   "feature": "me_boost",
+   "gain_share": 0.05322153805277538
+  },
+  {
+   "feature": "closing_speed",
+   "gain_share": 0.04741526137454301
+  },
+  {
+   "feature": "me_dist_ball",
+   "gain_share": 0.04706377932550453
+  },
+  {
+   "feature": "me_ahead_of_ball",
+   "gain_share": 0.0378659846584437
+  },
+  {
+   "feature": "me_speed",
+   "gain_share": 0.028299877161561574
+  },
+  {
+   "feature": "time_to_ball",
+   "gain_share": 0.027591112329296938
+  },
+  {
+   "feature": "time_since_kickoff",
+   "gain_share": 0.022822428521841624
+  },
+  {
+   "feature": "me_vy",
+   "gain_share": 0.022324239568112435
+  },
+  {
+   "feature": "opp1_dist_ball",
+   "gain_share": 0.020622335492900334
+  },
+  {
+   "feature": "me_x",
+   "gain_share": 0.01977524011588303
+  },
+  {
+   "feature": "me_closer_than_mate",
+   "gain_share": 0.018819624987059146
+  },
+  {
+   "feature": "ball_vx",
+   "gain_share": 0.017610932565751424
+  },
+  {
+   "feature": "me_vx",
+   "gain_share": 0.017131792345782177
+  }
+ ],
+ "reliability": {
+  "decision_loglik": {
+   "players": 78,
+   "split_half_corr": 0.158280060867723
+  },
+  "challenge_rate": {
+   "players": 78,
+   "split_half_corr": 0.4537478557434147
+  },
+  "challenge_minus_policy": {
+   "players": 78,
+   "split_half_corr": 0.33287295609902573
+  },
+  "gc_gap": {
+   "players": 78,
+   "split_half_corr": 0.5040327817989125
+  },
+  "retreat_where_gc_challenges": {
+   "players": 78,
+   "split_half_corr": 0.030076301190101788
+  },
+  "challenge_where_gc_would_not": {
+   "players": 78,
+   "split_half_corr": 0.35243132994851795
+  }
+ },
+ "counterfactual": {
+  "gc_rank": 80.0,
+  "action_matrix": {
+   "advance->advance": 76554,
+   "advance->big_pad": 3056,
+   "advance->challenge": 14686,
+   "advance->hold": 23144,
+   "advance->retreat": 3698,
+   "big_pad->advance": 9396,
+   "big_pad->big_pad": 8577,
+   "big_pad->challenge": 3028,
+   "big_pad->hold": 5980,
+   "big_pad->retreat": 14531,
+   "challenge->advance": 11394,
+   "challenge->big_pad": 1023,
+   "challenge->challenge": 90269,
+   "challenge->hold": 19755,
+   "challenge->retreat": 13843,
+   "hold->advance": 23532,
+   "hold->big_pad": 2960,
+   "hold->challenge": 22435,
+   "hold->hold": 77524,
+   "hold->retreat": 20706,
+   "retreat->advance": 3227,
+   "retreat->big_pad": 2732,
+   "retreat->challenge": 11189,
+   "retreat->hold": 14506,
+   "retreat->retreat": 100301
+  },
+  "by_rank_bin": [
+   {
+    "rank_bin": null,
+    "rows": 198213,
+    "gc_gap": 0.015224075212433828,
+    "challenge_rate": 0.23185663907009127,
+    "gc_policy_challenge_rate": 0.22746401221413637
+   },
+   {
+    "rank_bin": 12.0,
+    "rows": 120,
+    "gc_gap": 0.11975456320455814,
+    "challenge_rate": 0.05,
+    "gc_policy_challenge_rate": 0.13195801895356424
+   },
+   {
+    "rank_bin": 36.0,
+    "rows": 1252,
+    "gc_gap": 0.007580948224670738,
+    "challenge_rate": 0.1597444089456869,
+    "gc_policy_challenge_rate": 0.2082387537736666
+   },
+   {
+    "rank_bin": 48.0,
+    "rows": 34715,
+    "gc_gap": 0.022771977712564513,
+    "challenge_rate": 0.19838686446780932,
+    "gc_policy_challenge_rate": 0.21492999988825082
+   },
+   {
+    "rank_bin": 60.0,
+    "rows": 1562,
+    "gc_gap": 0.008557534068462816,
+    "challenge_rate": 0.18181818181818182,
+    "gc_policy_challenge_rate": 0.20452948061458223
+   },
+   {
+    "rank_bin": 72.0,
+    "rows": 350,
+    "gc_gap": 0.0035417298422029137,
+    "challenge_rate": 0.2714285714285714,
+    "gc_policy_challenge_rate": 0.24051858702976628
+   },
+   {
+    "rank_bin": 84.0,
+    "rows": 341834,
+    "gc_gap": 0.01165844161465142,
+    "challenge_rate": 0.24238373011461703,
+    "gc_policy_challenge_rate": 0.22963113439305052
+   }
+  ]
+ }
+}

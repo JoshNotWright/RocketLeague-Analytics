@@ -94,8 +94,12 @@ the same rules as the ballchasing key.
 4. New `scripts/crawler_batch.py` (what the systemd unit runs): crawl window -> decode
    batch -> write a batch manifest (`<yyyy-mm-dd>-<n>.manifest.json`: ids, npz sha256,
    sizes) -> rclone decoded + meta + manifest to the lab.
-5. New `scripts/lab_validate.py`: for a manifest, check every npz exists on the lab with
-   matching size and sha256; write `<yyyy-mm-dd>.ok` next to it on success.
+5. New `scripts/lab_validate.py`, run **on the lab, triggered by the box over SSH right
+   after the push** (no cron on the lab): reads the manifest, hashes every npz on the lab's
+   own disk, writes `<batch>.ok` next to the manifest only if every id, size and sha256
+   matches. Push + validate for a 20k batch is minutes and overlaps the next batch's crawl;
+   the crawler never stops for it. If the lab is unreachable, batches queue on the box and
+   validate in order on the next successful connection.
 6. Cleanup step on the box: delete raws and npz for a batch only when its `.ok` is present
    on the lab (mirrored back by rclone); never touch metadata or crawl state.
 8. `scripts/crawler_image.sh`, `crawler_up.sh`, `crawler_down.sh`, `crawler_status.sh` as

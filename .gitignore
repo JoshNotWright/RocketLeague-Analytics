@@ -21,3 +21,4 @@ player_cache.pkl
 tools/
 *.part
 reports/**/model_table.parquet
+reports/**/*.parquet

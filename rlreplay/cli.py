@@ -132,6 +132,56 @@ def cmd_extract(args):
           f"{len(failures)} failures, {time.time() - started:.0f}s")
 
 
+def _touches_one(path: str):
+    from .events import extract_touches
+    from .header import parse
+    replay_id = Path(path).stem
+    try:
+        return replay_id, extract_touches(parse(path, network=True), replay_id=replay_id), None
+    except Exception as exc:  # noqa: BLE001
+        return replay_id, [], f"{type(exc).__name__}: {str(exc)[:200]}"
+
+
+def cmd_touches(args):
+    import polars as pl
+    paths = sorted(str(p) for p in Path(args.raw).glob("*.replay"))
+    if args.limit:
+        paths = paths[:args.limit]
+    rows, failures = [], {}
+    started = time.time()
+    with ProcessPoolExecutor(max_workers=args.workers) as pool:
+        futures = [pool.submit(_touches_one, p) for p in paths]
+        for n, future in enumerate(as_completed(futures), 1):
+            replay_id, got, error = future.result()
+            if error:
+                failures[replay_id] = error
+            rows.extend(got)
+            if n % 200 == 0:
+                print(f"{n}/{len(paths)} parsed, {len(rows)} touches, {len(failures)} failed, {time.time() - started:.0f}s", flush=True)
+    frame = pl.DataFrame(rows, infer_schema_length=None)
+    Path(args.out).parent.mkdir(parents=True, exist_ok=True)
+    frame.write_parquet(args.out)
+    Path(args.out).with_suffix(".failures.json").write_text(json.dumps(failures, indent=1))
+    print(f"{args.out}: {frame.height} touches from {len(paths) - len(failures)} replays, "
+          f"{len(failures)} failures, {time.time() - started:.0f}s")
+
+
+def cmd_xg(args):
+    import polars as pl
+    from . import xg
+    touches = pl.read_parquet(args.touches)
+    table = pl.read_parquet(args.table)
+    report = xg.run(touches, table, Path(args.out), train_end=args.train_end, valid_end=args.valid_end)
+    print(report["markdown"])
+
+
+def cmd_value(args):
+    import polars as pl
+    from . import value
+    report = value.run(pl.read_parquet(args.touches_scored), Path(args.out), min_games=args.min_games)
+    print(report["markdown"])
+
+
 def cmd_validate(args):
     import polars as pl
     from .validate import compare, to_markdown
@@ -204,6 +254,15 @@ def main(argv=None):
     p = sub.add_parser("extract"); p.add_argument("--raw", required=True); p.add_argument("--out", required=True)
     p.add_argument("--workers", type=int, default=None); p.add_argument("--limit", type=int, default=0)
     p.set_defaults(func=cmd_extract)
+    p = sub.add_parser("touches"); p.add_argument("--raw", required=True); p.add_argument("--out", required=True)
+    p.add_argument("--workers", type=int, default=None); p.add_argument("--limit", type=int, default=0)
+    p.set_defaults(func=cmd_touches)
+    p = sub.add_parser("xg"); p.add_argument("--touches", required=True); p.add_argument("--table", required=True)
+    p.add_argument("--out", required=True); p.add_argument("--train-end", required=True); p.add_argument("--valid-end", required=True)
+    p.set_defaults(func=cmd_xg)
+    p = sub.add_parser("value"); p.add_argument("--touches-scored", required=True); p.add_argument("--out", required=True)
+    p.add_argument("--min-games", type=int, default=30)
+    p.set_defaults(func=cmd_value)
     p = sub.add_parser("validate"); p.add_argument("--table", required=True); p.add_argument("--frames", required=True)
     p.add_argument("--out", default=None)
     p.set_defaults(func=cmd_validate)

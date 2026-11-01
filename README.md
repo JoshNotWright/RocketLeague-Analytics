@@ -13,10 +13,13 @@ See [docs/VALIDATION.md](docs/VALIDATION.md) for the checks performed and their 
 public GC+ replay dataset, computes per-player-game frame features, and tests whether they
 predict outcomes better than ballchasing's summary stats under a strict time split. See
 [docs/V2_METHODOLOGY.md](docs/V2_METHODOLOGY.md) for the design and
-[docs/V2_RESULTS.md](docs/V2_RESULTS.md) for the numbers. It needs no ballchasing key:
+[docs/V2_RESULTS.md](docs/V2_RESULTS.md) for the numbers, and
+[docs/V2_XG.md](docs/V2_XG.md) for the touch-level expected-goals models built on the same
+replays. It needs no ballchasing key:
 replays come one file at a time from Kaggle's public per-file endpoint, and parsing uses
 the `rrrocket` binary (nickbabcock) placed in `tools/`. Its extra dependencies are listed
-in `requirements-v2.txt`.
+in `requirements-v2.txt`. `data/` is gitignored and may be a junction to a larger drive
+(`mklink /J data D:\RocketLeague-Analytics\data`); replays run to about 1 GB per thousand.
 
 Security note: a ballchasing API token was committed in the 2023 version of this repository
 and is still present in the published Git history. It must be revoked and reissued through

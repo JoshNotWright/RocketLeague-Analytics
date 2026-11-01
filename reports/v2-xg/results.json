@@ -1,0 +1,547 @@
+{
+ "rows": {
+  "train": 376761,
+  "valid": 80116,
+  "test": 156359
+ },
+ "train_end": "2025-04-01",
+ "valid_end": "2025-07-01",
+ "models": {
+  "touch_xg": {
+   "target": "scored",
+   "n_features": 39,
+   "best_iteration": 297,
+   "base_rate_train": 0.028535331416999106,
+   "constant": {
+    "n": 156359,
+    "log_loss": 0.12691153153254597,
+    "auc": 0.5,
+    "brier": 0.026998873520909406,
+    "accuracy": 0.9722305719530056
+   },
+   "test": {
+    "n": 156359,
+    "log_loss": 0.044735283657439416,
+    "auc": 0.9807624760578926,
+    "brier": 0.012595932262276406,
+    "accuracy": 0.9826680907398998
+   },
+   "calibration": [
+    {
+     "bin": 0,
+     "n": 15636,
+     "mean_pred": 0.00010619919470186866,
+     "mean_actual": 0.00012790995139421848
+    },
+    {
+     "bin": 1,
+     "n": 15636,
+     "mean_pred": 0.00018953923501473195,
+     "mean_actual": 0.00012790995139421848
+    },
+    {
+     "bin": 2,
+     "n": 15636,
+     "mean_pred": 0.00028765507943356617,
+     "mean_actual": 0.0003197748784855462
+    },
+    {
+     "bin": 3,
+     "n": 15636,
+     "mean_pred": 0.000415993651768757,
+     "mean_actual": 0.00025581990278843696
+    },
+    {
+     "bin": 4,
+     "n": 15636,
+     "mean_pred": 0.0005907032382326718,
+     "mean_actual": 0.0003837298541826554
+    },
+    {
+     "bin": 5,
+     "n": 15636,
+     "mean_pred": 0.000853967432126722,
+     "mean_actual": 0.0009593246354566385
+    },
+    {
+     "bin": 6,
+     "n": 15636,
+     "mean_pred": 0.0013059928889442207,
+     "mean_actual": 0.001343054489639294
+    },
+    {
+     "bin": 7,
+     "n": 15636,
+     "mean_pred": 0.002218623783585813,
+     "mean_actual": 0.002430289076490151
+    },
+    {
+     "bin": 8,
+     "n": 15636,
+     "mean_pred": 0.00621155046992766,
+     "mean_actual": 0.0065873624968022515
+    },
+    {
+     "bin": 9,
+     "n": 15635,
+     "mean_pred": 0.26661715987179063,
+     "mean_actual": 0.26517428845538854
+    }
+   ],
+   "importances": [
+    {
+     "feature": "shot",
+     "gain_share": 0.31724594161495073
+    },
+    {
+     "feature": "proj_x",
+     "gain_share": 0.13922741163373548
+    },
+    {
+     "feature": "ball_y",
+     "gain_share": 0.07440544972728003
+    },
+    {
+     "feature": "proj_t",
+     "gain_share": 0.06554616701208696
+    },
+    {
+     "feature": "goal_angle_width",
+     "gain_share": 0.04778510304843505
+    },
+    {
+     "feature": "proj_z",
+     "gain_share": 0.04202516374993659
+    },
+    {
+     "feature": "opp_min_dist_goal",
+     "gain_share": 0.03221763526776458
+    },
+    {
+     "feature": "dist_goal",
+     "gain_share": 0.02864013879352461
+    },
+    {
+     "feature": "post_toward_goal",
+     "gain_share": 0.026857201203183242
+    },
+    {
+     "feature": "post_angle_off_goal",
+     "gain_share": 0.02273254005897677
+    },
+    {
+     "feature": "opps_behind_ball",
+     "gain_share": 0.017609250091436327
+    },
+    {
+     "feature": "post_speed",
+     "gain_share": 0.015969244224552592
+    },
+    {
+     "feature": "opp_min_dist_ball",
+     "gain_share": 0.013856877486911353
+    },
+    {
+     "feature": "post_vy",
+     "gain_share": 0.013755233123812093
+    },
+    {
+     "feature": "pre_vy",
+     "gain_share": 0.012128873001744036
+    },
+    {
+     "feature": "post_vz",
+     "gain_share": 0.011318647119889983
+    },
+    {
+     "feature": "ball_z",
+     "gain_share": 0.00998263142926198
+    },
+    {
+     "feature": "opps_between",
+     "gain_share": 0.008380341828481169
+    },
+    {
+     "feature": "me_speed",
+     "gain_share": 0.007923784132690025
+    },
+    {
+     "feature": "time_since_kickoff",
+     "gain_share": 0.00754643399088262
+    }
+   ],
+   "test_shots_only": {
+    "n": 14537,
+    "log_loss": 0.3560361120012938,
+    "auc": 0.8781005172084244,
+    "brier": 0.1120894184669998,
+    "accuracy": 0.8399944968012657
+   }
+  },
+  "threat": {
+   "target": "team_goal_within_10s",
+   "n_features": 29,
+   "best_iteration": 333,
+   "base_rate_train": 0.12491738794620462,
+   "constant": {
+    "n": 156359,
+    "log_loss": 0.3723644574909342,
+    "auc": 0.5,
+    "brier": 0.10767721700337196,
+    "accuracy": 0.877263221176907
+   },
+   "test": {
+    "n": 156359,
+    "log_loss": 0.3292609974319881,
+    "auc": 0.7124439197311248,
+    "brier": 0.09476573701622515,
+    "accuracy": 0.8858012650375099
+   },
+   "calibration": [
+    {
+     "bin": 0,
+     "n": 15636,
+     "mean_pred": 0.034646919482908,
+     "mean_actual": 0.04035558966487593
+    },
+    {
+     "bin": 1,
+     "n": 15636,
+     "mean_pred": 0.053108620215287866,
+     "mean_actual": 0.05269889997441801
+    },
+    {
+     "bin": 2,
+     "n": 15636,
+     "mean_pred": 0.06462117362973277,
+     "mean_actual": 0.06958301355845485
+    },
+    {
+     "bin": 3,
+     "n": 15636,
+     "mean_pred": 0.07488636310744462,
+     "mean_actual": 0.07629828600665131
+    },
+    {
+     "bin": 4,
+     "n": 15636,
+     "mean_pred": 0.08547340498995443,
+     "mean_actual": 0.087234586850857
+    },
+    {
+     "bin": 5,
+     "n": 15636,
+     "mean_pred": 0.0977491534478939,
+     "mean_actual": 0.09011256075722691
+    },
+    {
+     "bin": 6,
+     "n": 15636,
+     "mean_pred": 0.11385074660748548,
+     "mean_actual": 0.11051419800460476
+    },
+    {
+     "bin": 7,
+     "n": 15636,
+     "mean_pred": 0.13818290059520347,
+     "mean_actual": 0.1337298541826554
+    },
+    {
+     "bin": 8,
+     "n": 15636,
+     "mean_pred": 0.18296153715902227,
+     "mean_actual": 0.17568431823995906
+    },
+    {
+     "bin": 9,
+     "n": 15635,
+     "mean_pred": 0.3984186115937989,
+     "mean_actual": 0.39117364886472655
+    }
+   ],
+   "importances": [
+    {
+     "feature": "goal_angle_width",
+     "gain_share": 0.2264537597322704
+    },
+    {
+     "feature": "opps_behind_ball",
+     "gain_share": 0.09084008905653922
+    },
+    {
+     "feature": "opp_min_dist_ball",
+     "gain_share": 0.0747912977764108
+    },
+    {
+     "feature": "dist_goal",
+     "gain_share": 0.0647691653927251
+    },
+    {
+     "feature": "opp_min_dist_goal",
+     "gain_share": 0.048834750219942304
+    },
+    {
+     "feature": "me_boost",
+     "gain_share": 0.04224520811945007
+    },
+    {
+     "feature": "me_speed",
+     "gain_share": 0.03517124621395868
+    },
+    {
+     "feature": "ball_z",
+     "gain_share": 0.03474723914745028
+    },
+    {
+     "feature": "seconds_remaining",
+     "gain_share": 0.0318531903584318
+    },
+    {
+     "feature": "pre_vy",
+     "gain_share": 0.029960781899896836
+    },
+    {
+     "feature": "opp_nearest_boost",
+     "gain_share": 0.02993739469677026
+    },
+    {
+     "feature": "time_since_kickoff",
+     "gain_share": 0.0297364064876326
+    },
+    {
+     "feature": "dist_own_goal",
+     "gain_share": 0.028173470592687645
+    },
+    {
+     "feature": "ball_y",
+     "gain_share": 0.027873100846024342
+    },
+    {
+     "feature": "ball_x",
+     "gain_share": 0.025852313437119367
+    },
+    {
+     "feature": "mate_min_dist_own_goal",
+     "gain_share": 0.024857930010681224
+    },
+    {
+     "feature": "mate_min_dist",
+     "gain_share": 0.024444814085315923
+    },
+    {
+     "feature": "me_z",
+     "gain_share": 0.02415740772670473
+    },
+    {
+     "feature": "pre_speed",
+     "gain_share": 0.019798801494031834
+    },
+    {
+     "feature": "opps_between",
+     "gain_share": 0.01900002548843992
+    }
+   ]
+  },
+  "threat_against": {
+   "target": "opp_goal_within_10s",
+   "n_features": 29,
+   "best_iteration": 157,
+   "base_rate_train": 0.07147236577034247,
+   "constant": {
+    "n": 156359,
+    "log_loss": 0.2487168494272888,
+    "auc": 0.5,
+    "brier": 0.06345157497541525,
+    "accuracy": 0.9319258885001823
+   },
+   "test": {
+    "n": 156359,
+    "log_loss": 0.23359314289538494,
+    "auc": 0.6607453362414621,
+    "brier": 0.06034990801141518,
+    "accuracy": 0.932981152348122
+   },
+   "calibration": [
+    {
+     "bin": 0,
+     "n": 15636,
+     "mean_pred": 0.02667437645969559,
+     "mean_actual": 0.025837810181632132
+    },
+    {
+     "bin": 1,
+     "n": 15636,
+     "mean_pred": 0.037524450161918424,
+     "mean_actual": 0.036965975952929137
+    },
+    {
+     "bin": 2,
+     "n": 15636,
+     "mean_pred": 0.04378066266293534,
+     "mean_actual": 0.040739319519058584
+    },
+    {
+     "bin": 3,
+     "n": 15636,
+     "mean_pred": 0.049521659707057006,
+     "mean_actual": 0.047262727040163724
+    },
+    {
+     "bin": 4,
+     "n": 15636,
+     "mean_pred": 0.0554241646886254,
+     "mean_actual": 0.05500127909951394
+    },
+    {
+     "bin": 5,
+     "n": 15636,
+     "mean_pred": 0.062110379509556835,
+     "mean_actual": 0.06286774111025838
+    },
+    {
+     "bin": 6,
+     "n": 15636,
+     "mean_pred": 0.07047603670920646,
+     "mean_actual": 0.06907137375287797
+    },
+    {
+     "bin": 7,
+     "n": 15636,
+     "mean_pred": 0.08085709151186213,
+     "mean_actual": 0.07751343054489639
+    },
+    {
+     "bin": 8,
+     "n": 15636,
+     "mean_pred": 0.09652691747946662,
+     "mean_actual": 0.08876950626758762
+    },
+    {
+     "bin": 9,
+     "n": 15635,
+     "mean_pred": 0.18890716663546533,
+     "mean_actual": 0.1767188999040614
+    }
+   ],
+   "importances": [
+    {
+     "feature": "dist_own_goal",
+     "gain_share": 0.18855214386323055
+    },
+    {
+     "feature": "opp_min_dist_ball",
+     "gain_share": 0.0988663446477848
+    },
+    {
+     "feature": "ball_y",
+     "gain_share": 0.06280079628901113
+    },
+    {
+     "feature": "me_boost",
+     "gain_share": 0.04671261132695635
+    },
+    {
+     "feature": "seconds_remaining",
+     "gain_share": 0.045410066647428166
+    },
+    {
+     "feature": "mate_min_dist_own_goal",
+     "gain_share": 0.04349860748552922
+    },
+    {
+     "feature": "me_dist_own_goal",
+     "gain_share": 0.042956178239883715
+    },
+    {
+     "feature": "opp_nearest_boost",
+     "gain_share": 0.0422468418014573
+    },
+    {
+     "feature": "mate_min_dist",
+     "gain_share": 0.0384045457601564
+    },
+    {
+     "feature": "ball_z",
+     "gain_share": 0.0378053899505971
+    },
+    {
+     "feature": "time_since_kickoff",
+     "gain_share": 0.037188455526437854
+    },
+    {
+     "feature": "me_z",
+     "gain_share": 0.0352178430240869
+    },
+    {
+     "feature": "dist_goal",
+     "gain_share": 0.034594115523642596
+    },
+    {
+     "feature": "opp_min_dist_goal",
+     "gain_share": 0.03381174732101176
+    },
+    {
+     "feature": "me_speed",
+     "gain_share": 0.030276136624942572
+    },
+    {
+     "feature": "ball_x",
+     "gain_share": 0.027971286618989857
+    },
+    {
+     "feature": "goal_angle_width",
+     "gain_share": 0.027306416075106577
+    },
+    {
+     "feature": "pre_vy",
+     "gain_share": 0.02730534601443366
+    },
+    {
+     "feature": "score_diff",
+     "gain_share": 0.019748721679186107
+    },
+    {
+     "feature": "pre_vx",
+     "gain_share": 0.017535068520036202
+    }
+   ]
+  }
+ },
+ "skill_checks": {
+  "min_games": 30,
+  "players": 95,
+  "z_variance_ratio": 0.8218750901575147,
+  "share_abs_z_over_2": 0.0,
+  "goals_above_xg_per_game": {
+   "players": 102,
+   "split_half_corr": 0.030431673624109756
+  },
+  "xg_per_game": {
+   "players": 102,
+   "split_half_corr": 0.6318998934543683
+  },
+  "xg_per_shot": {
+   "players": 100,
+   "split_half_corr": 0.0865625433876637
+  },
+  "mean_threat": {
+   "players": 102,
+   "split_half_corr": 0.5606241781002275
+  },
+  "shots_per_game": {
+   "players": 102,
+   "split_half_corr": 0.5681209659571274
+  }
+ },
+ "player_game_checks": {
+  "rows": 11938,
+  "corr_xg_vs_goals": 0.8009688811760223,
+  "corr_goals_vs_bc_goals": 0.9927006508327302,
+  "corr_shots_vs_bc_shots": 0.7750166219709211,
+  "mean_shots": 4.691573127827107,
+  "mean_bc_shots": 4.4264533422683865,
+  "mean_goals": 1.4487351315128163,
+  "mean_bc_goals": 1.4694253643826436,
+  "mean_xg": 1.4444586014489642
+ }
+}

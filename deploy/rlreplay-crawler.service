@@ -1,0 +1,26 @@
+[Unit]
+Description=rlreplay cloud crawler: crawl, decode, push batches to the lab
+After=network-online.target tailscaled.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/rlreplay
+# Secrets and settings written over SSH by scripts/crawler_up.sh (root, mode 600): never in this
+# unit, never in cloud-init, never on a command line.
+EnvironmentFile=/etc/rlreplay/env
+Environment=RLREPLAY_CRAWLER_CONFIG=/etc/rlreplay/crawler.json
+Environment=RCLONE_CONFIG=/etc/rlreplay/rclone.conf
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/rlreplay/.venv/bin/python /opt/rlreplay/scripts/crawler_batch.py run
+# SIGTERM makes the loop finish its page, seal, push and start validation before exiting.
+KillSignal=SIGTERM
+KillMode=mixed
+TimeoutStopSec=3600
+Restart=on-failure
+RestartSec=60
+Nice=5
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Replay lab</title>
+<style>
+  :root {
+    --bg: #f4f5f7; --surface: #ffffff; --surface-2: #f8f9fb; --line: #e4e7ec; --line-2: #eef0f3;
+    --ink: #171b21; --ink-2: #4f5866; --ink-3: #8b94a1; --accent: #2f63e9; --accent-ink: #ffffff; --accent-soft: #e6edff;
+    --good: #178a4c; --good-soft: #e1f4e8; --warn: #a86300; --warn-soft: #fff0d3; --bad: #c62f2f; --bad-soft: #fde3e3;
+    --track: #eceef2; --shadow: 0 1px 2px rgba(16, 24, 40, .05), 0 1px 3px rgba(16, 24, 40, .06);
+    --band-1: #4f7df5; --band-2: #e3912f; --band-3: #15a39a; --band-4: #9a6bd8; --band-5: #c54f8c;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace; --sans: system-ui, -apple-system, "Segoe UI", Roboto, Inter, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+    --bg: #0d1014; --surface: #151a20; --surface-2: #1a2028; --line: #262d37; --line-2: #1f252e;
+    --ink: #e9ecf0; --ink-2: #aab3bf; --ink-3: #6f7986; --accent: #6b95ff; --accent-ink: #0d1014; --accent-soft: #1b2a4d;
+    --good: #4fcf84; --good-soft: #14301f; --warn: #f0b04a; --warn-soft: #3a2b0e; --bad: #f27373; --bad-soft: #3d1a1a;
+    --track: #232a33; --shadow: none; --band-1: #6f95ff; --band-2: #f0a24a; --band-3: #2fc1b6; --band-4: #b38cf0; --band-5: #e07bb0;
+  } }
+  :root[data-theme="dark"] {
+    --bg: #0d1014; --surface: #151a20; --surface-2: #1a2028; --line: #262d37; --line-2: #1f252e;
+    --ink: #e9ecf0; --ink-2: #aab3bf; --ink-3: #6f7986; --accent: #6b95ff; --accent-ink: #0d1014; --accent-soft: #1b2a4d;
+    --good: #4fcf84; --good-soft: #14301f; --warn: #f0b04a; --warn-soft: #3a2b0e; --bad: #f27373; --bad-soft: #3d1a1a;
+    --track: #232a33; --shadow: none; --band-1: #6f95ff; --band-2: #f0a24a; --band-3: #2fc1b6; --band-4: #b38cf0; --band-5: #e07bb0;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body { background: var(--bg); color: var(--ink); font: 14px/1.5 var(--sans); -webkit-font-smoothing: antialiased; }
+  a { color: var(--accent); text-decoration: none; }
+  .app { display: grid; grid-template-columns: 232px 1fr; min-height: 100%; }
+  /* sidebar */
+  aside { border-right: 1px solid var(--line); background: var(--surface); padding: 20px 14px; display: flex; flex-direction: column; gap: 6px; position: sticky; top: 0; height: 100vh; }
+  .brand { display: flex; align-items: center; gap: 10px; padding: 4px 8px 16px; }
+  .brand .logo { width: 28px; height: 28px; border-radius: 8px; background: linear-gradient(135deg, var(--accent), var(--band-3)); }
+  .brand b { font-size: 15px; } .brand small { display: block; color: var(--ink-3); font-size: 11px; }
+  nav a { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; color: var(--ink-2); font-weight: 500; }
+  nav a svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  nav a:hover { background: var(--surface-2); color: var(--ink); } nav a.active { background: var(--accent-soft); color: var(--accent); }
+  nav a .count { margin-left: auto; font-size: 11px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+  .side-foot { margin-top: auto; display: grid; gap: 10px; padding: 10px 8px 0; border-top: 1px solid var(--line); font-size: 12px; color: var(--ink-2); }
+  .pulse { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--good); box-shadow: 0 0 0 0 var(--good); animation: pulse 2s infinite; }
+  .pulse.warn { background: var(--warn); animation: none; } .pulse.off { background: var(--ink-3); animation: none; } .pulse.bad { background: var(--bad); animation: none; }
+  @keyframes pulse { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--good) 45%, transparent); } 70% { box-shadow: 0 0 0 8px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
+  .minibar { height: 6px; border-radius: 3px; background: var(--track); overflow: hidden; } .minibar > i { display: block; height: 100%; background: var(--accent); }
+  /* main */
+  main { padding: 28px 36px 72px; max-width: 1180px; width: 100%; }
+  .page { display: none; } .page.active { display: block; animation: fade .18s ease-out; }
+  @keyframes fade { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+  .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
+  .page-head h1 { margin: 0; font-size: 22px; font-weight: 650; letter-spacing: -.01em; }
+  .page-head p { margin: 4px 0 0; color: var(--ink-2); max-width: 70ch; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); padding: 20px 22px; margin-bottom: 18px; }
+  .card h2 { font-size: 13px; font-weight: 600; margin: 0 0 14px; color: var(--ink-2); display: flex; align-items: baseline; gap: 10px; }
+  .card h2 .hint { font-weight: 400; color: var(--ink-3); font-size: 12px; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+  .tile { padding: 14px 16px; border: 1px solid var(--line-2); border-radius: 10px; background: var(--surface-2); }
+  .tile .k { color: var(--ink-3); font-size: 12px; } .tile .v { font-size: 24px; font-weight: 650; font-variant-numeric: tabular-nums; margin-top: 2px; letter-spacing: -.01em; }
+  .tile .v small { font-size: 13px; color: var(--ink-3); font-weight: 500; } .tile .s { color: var(--ink-2); font-size: 12px; margin-top: 2px; }
+  .hero { display: grid; grid-template-columns: 1fr auto; gap: 20px; align-items: center; }
+  .hero .state { font-size: 20px; font-weight: 650; letter-spacing: -.01em; display: flex; align-items: center; gap: 12px; }
+  .hero .sub { color: var(--ink-2); margin-top: 4px; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  button { font: inherit; font-weight: 500; padding: 7px 13px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; transition: background .12s, border-color .12s; }
+  button:hover { background: var(--surface-2); border-color: var(--ink-3); } button:disabled { opacity: .5; cursor: default; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); } button.primary:hover { filter: brightness(1.06); }
+  button.danger { color: var(--bad); } button.danger:hover { background: var(--bad-soft); border-color: var(--bad); }
+  .chip { display: inline-flex; align-items: center; gap: 6px; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 600; background: var(--accent-soft); color: var(--accent); white-space: nowrap; }
+  .chip.good { background: var(--good-soft); color: var(--good); } .chip.warn { background: var(--warn-soft); color: var(--warn); } .chip.bad { background: var(--bad-soft); color: var(--bad); } .chip.muted { background: var(--track); color: var(--ink-2); }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line-2); vertical-align: middle; }
+  th { color: var(--ink-3); font-weight: 600; font-size: 12px; } td.num, th.num { text-align: right; white-space: nowrap; } tr:last-child td { border-bottom: 0; }
+  tr.total td { font-weight: 600; border-top: 1px solid var(--line); }
+  .cell { display: flex; align-items: center; gap: 8px; min-width: 110px; } .cell .spark { flex: 1; height: 6px; background: var(--track); border-radius: 3px; overflow: hidden; } .cell .spark i { display: block; height: 100%; }
+  .cell b { font-weight: 500; min-width: 54px; text-align: right; } .cell .tick { color: var(--good); font-size: 12px; }
+  .progress { height: 8px; background: var(--track); border-radius: 4px; overflow: hidden; margin: 8px 0 4px; } .progress > i { display: block; height: 100%; background: var(--accent); transition: width .4s; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; } .grid3 { display: grid; grid-template-columns: 2fr 1fr; gap: 18px; }
+  @media (max-width: 900px) { .grid2, .grid3 { grid-template-columns: 1fr; } .app { grid-template-columns: 1fr; } aside { position: static; height: auto; flex-direction: row; flex-wrap: wrap; align-items: center; } .side-foot { display: none; } main { padding: 20px 16px 60px; } .hero { grid-template-columns: 1fr; } }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--ink-2); margin-bottom: 8px; } .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+  svg.chart { width: 100%; height: auto; display: block; } svg.chart text { font-family: var(--sans); font-size: 12px; fill: var(--ink-3); } svg.chart .grid { stroke: var(--line-2); } svg.chart .axis { stroke: var(--line); }
+  .tip { position: fixed; pointer-events: none; background: var(--ink); color: var(--bg); padding: 6px 10px; border-radius: 6px; font-size: 12px; opacity: 0; transition: opacity .1s; z-index: 10; white-space: nowrap; }
+  .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 4px 0 16px; } .step { padding: 10px 12px; border-radius: 8px; background: var(--surface-2); border: 1px solid var(--line-2); font-size: 12px; color: var(--ink-2); } .step b { display: block; color: var(--ink); font-size: 13px; margin-bottom: 2px; }
+  @media (max-width: 700px) { .steps { grid-template-columns: 1fr 1fr; } }
+  form .field { display: grid; grid-template-columns: 190px 1fr; gap: 4px 16px; align-items: start; padding: 10px 0; border-bottom: 1px solid var(--line-2); } form .field:last-of-type { border-bottom: 0; }
+  form .field label { font-weight: 500; padding-top: 6px; } form .field .help { grid-column: 2; color: var(--ink-3); font-size: 12px; }
+  input, select { font: inherit; padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); width: 100%; } input:focus { outline: 2px solid var(--accent-soft); border-color: var(--accent); }
+  .inline { display: flex; gap: 8px; align-items: center; } .inline input { width: auto; flex: 1; }
+  pre.log { background: #0b0e12; color: #d7dde6; border-radius: 10px; padding: 12px 14px; font: 12px/1.55 var(--mono); max-height: 360px; overflow: auto; white-space: pre-wrap; margin: 12px 0 0; }
+  .ops { list-style: none; padding: 0; margin: 0; } .ops li { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; padding: 8px 10px; border-radius: 8px; cursor: pointer; } .ops li:hover { background: var(--surface-2); } .ops li.open { background: var(--accent-soft); }
+  .op-card { padding: 14px 16px; border: 1px solid var(--line-2); border-radius: 10px; background: var(--surface-2); display: grid; gap: 8px; } .op-card p { margin: 0; color: var(--ink-2); font-size: 12px; }
+  .empty { padding: 28px; text-align: center; color: var(--ink-2); border: 1px dashed var(--line); border-radius: 10px; } .empty b { color: var(--ink); display: block; margin-bottom: 4px; }
+  .muted { color: var(--ink-3); } .mono { font-family: var(--mono); font-size: 12px; } td.mono { white-space: nowrap; }
+  .kv { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 6px 16px; font-size: 13px; } .kv .k { color: var(--ink-3); } .kv span { overflow-wrap: anywhere; }
+  .grid2 > *, .grid3 > * { min-width: 0; } .card { min-width: 0; overflow-wrap: anywhere; }
+  details summary { cursor: pointer; color: var(--accent); font-size: 12px; } details pre { margin: 6px 0 0; font: 12px/1.5 var(--mono); color: var(--ink-2); white-space: pre-wrap; }
+  .ring { width: 72px; height: 72px; } .ring circle { fill: none; stroke-width: 8; } .ring .track { stroke: var(--track); } .ring .val { stroke: var(--accent); stroke-linecap: round; transform: rotate(-90deg); transform-origin: 50% 50%; transition: stroke-dasharray .4s; }
+  .toast { position: fixed; bottom: 18px; right: 18px; background: var(--ink); color: var(--bg); padding: 9px 14px; border-radius: 8px; font-size: 13px; opacity: 0; transform: translateY(6px); transition: all .2s; z-index: 20; } .toast.show { opacity: 1; transform: none; }
+  .theme { margin-left: auto; width: 30px; height: 30px; padding: 0; display: grid; place-items: center; }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside>
+    <div class="brand"><div class="logo"></div><div><b>Replay lab</b><small id="brand-sub">Rocket League archive</small></div></div>
+    <nav id="nav">
+      <a href="#overview" data-page="overview"><svg viewBox="0 0 24 24"><path d="M3 12l9-8 9 8M5 10v10h14V10"/></svg>Overview</a>
+      <a href="#archive" data-page="archive"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></svg>Archive<span class="count" id="nav-archive"></span></a>
+      <a href="#transfers" data-page="transfers"><svg viewBox="0 0 24 24"><path d="M4 9h13l-3-3M20 15H7l3 3"/></svg>Transfers<span class="count" id="nav-transfers"></span></a>
+      <a href="#crawler" data-page="crawler"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8M12 17v4"/></svg>Crawler<span class="count" id="nav-crawler"></span></a>
+      <a href="#settings" data-page="settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg>Settings</a>
+    </nav>
+    <div class="side-foot">
+      <div id="side-box"><span class="pulse off"></span> no crawler box</div>
+      <div><div style="display:flex;justify-content:space-between"><span>Lab disk</span><span id="side-disk" class="mono"></span></div><div class="minibar"><i id="side-disk-bar" style="width:0"></i></div></div>
+      <div style="display:flex;align-items:center;gap:8px"><span id="side-updated" class="muted">connecting…</span><button class="theme" onclick="toggleTheme()" title="Switch theme">◐</button></div>
+    </div>
+  </aside>
+
+  <main>
+    <!-- OVERVIEW -->
+    <section class="page" id="page-overview">
+      <div class="page-head"><div><h1>Overview</h1><p>What the archive holds and what the crawler is doing right now. Everything on this page refreshes every ten seconds.</p></div></div>
+      <div class="card hero" id="hero"></div>
+      <div class="tiles" id="ov-tiles" style="margin-bottom:18px"></div>
+      <div class="grid3">
+        <div class="card"><h2>Crawl rate <span class="hint">replays per minute reported by the box, last few hours</span></h2><div id="ov-rate"></div></div>
+        <div class="card"><h2>Archive by band</h2><div id="ov-bands"></div></div>
+      </div>
+      <div class="card" id="ov-guide" hidden></div>
+    </section>
+
+    <!-- ARCHIVE -->
+    <section class="page" id="page-archive">
+      <div class="page-head"><div><h1>Archive</h1><p>Every replay the lab has recorded in its ledger, by rank band and by the month it was played. A window is one band in one month; it is <em>complete</em> when ballchasing has nothing more to list for it.</p></div></div>
+      <div class="card"><h2>Replays per month <span class="hint">stacked by band</span></h2><div id="ar-legend" class="legend"></div><div id="ar-chart"></div></div>
+      <div class="card"><h2>Windows <span class="hint">replays in the ledger; the bar is relative to the fullest window; ✓ marks a complete listing</span></h2><div id="ar-table"></div></div>
+    </section>
+
+    <!-- TRANSFERS -->
+    <section class="page" id="page-transfers">
+      <div class="page-head"><div><h1>Transfers</h1><p>The box ships decoded replays in batches. Each batch travels through four stages and nothing on the box is deleted until the lab has confirmed it.</p></div></div>
+      <div class="steps">
+        <div class="step"><b>1 · Sealed</b>The box closes a batch and writes a manifest with every id, size and hash.</div>
+        <div class="step"><b>2 · Pushed</b>Decoded files, the ledger and the manifest are copied to the lab over the tailnet.</div>
+        <div class="step"><b>3 · Validated</b>The lab re-hashes every file on its own disk and checks the ledger; it writes an OK or a BAD mark.</div>
+        <div class="step"><b>4 · Cleaned</b>Only after the OK does the box delete that batch's raw and decoded files.</div>
+      </div>
+      <div class="tiles" id="tr-tiles" style="margin-bottom:18px"></div>
+      <div class="card"><h2>Batches <span class="hint">newest first</span></h2><div id="tr-table"></div></div>
+    </section>
+
+    <!-- CRAWLER -->
+    <section class="page" id="page-crawler">
+      <div class="page-head"><div><h1>Crawler</h1><p>The Hetzner box is disposable: it pulls the ledger from the lab when it starts, crawls and decodes, pushes batches, and is deleted when done. Pause and stop take effect within one page of replays.</p></div><div class="actions" id="cr-actions"></div></div>
+      <div id="cr-body"></div>
+      <div class="card"><h2>Operations <span class="hint">run on the lab; logs are kept under the archive's ops folder</span></h2>
+        <div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr))">
+          <div class="op-card"><b>Create box and start</b><p>Creates the server from the snapshot, hands it the keys over SSH, joins it to the tailnet and starts crawling with the settings on the Settings page. Re-running on an existing box just makes sure the service is up.</p><div><button class="primary" onclick="run('up')">Create and start</button></div></div>
+          <div class="op-card"><b>Stop, validate and delete</b><p>Asks the box to finish its page, push everything, wait for the lab to validate it, and only then deletes the server. If anything is unvalidated the server stays and the log says what.</p><div><button class="danger" onclick="run('down', 'stop the box, push and validate everything it holds, then delete the server')">Stop and delete</button></div></div>
+          <div class="op-card"><b>Rebuild the image</b><p>Builds a fresh snapshot from this repository on a throwaway server (about ten minutes). Needed after the pipeline code changes; the next box starts from it.</p><div><button onclick="run('image', 'rebuild the snapshot on a throwaway server')">Rebuild image</button></div></div>
+        </div>
+        <div style="margin-top:16px"><ul class="ops" id="ops"></ul><pre class="log" id="oplog" hidden></pre></div>
+      </div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section class="page" id="page-settings">
+      <div class="page-head"><div><h1>Settings</h1><p>Saved to the lab's env file and used the next time a box is created. A box that is already running keeps the settings it started with.</p></div></div>
+      <div class="grid3">
+        <div>
+          <form id="config" class="card" onsubmit="saveConfig(event)">
+            <h2>Server</h2>
+            <div class="field"><label for="f-CRAWLER_NAME">Box name</label><input id="f-CRAWLER_NAME" name="CRAWLER_NAME"><div class="help">Also its name on the tailnet. One box per name.</div></div>
+            <div class="field"><label for="f-CRAWLER_TYPE">Server type</label><select id="f-CRAWLER_TYPE" name="CRAWLER_TYPE"><option value="cpx22">cpx22 · 2 vCPU, 4 GB, 80 GB disk (use a 10,000 batch)</option><option value="cpx32">cpx32 · 4 vCPU, 8 GB, 160 GB disk (recommended)</option><option value="cpx42">cpx42 · 8 vCPU, 16 GB, 240 GB disk</option></select><div class="help">Four cores decode about 45 replays a second against a crawl of 2 a second, so cpx32 never falls behind. Roughly 6 cents an hour.</div></div>
+            <div class="field"><label for="f-CRAWLER_LOCATION">Location</label><select id="f-CRAWLER_LOCATION" name="CRAWLER_LOCATION"><option value="fsn1">Falkenstein (fsn1)</option><option value="nbg1">Nuremberg (nbg1)</option><option value="hel1">Helsinki (hel1)</option><option value="ash">Ashburn (ash)</option><option value="hil">Hillsboro (hil)</option></select><div class="help">Any EU location is close to ballchasing's servers.</div></div>
+            <h2 style="margin-top:18px">What to crawl</h2>
+            <div class="field"><label for="f-CRAWLER_PLAYLIST">Playlist</label><input id="f-CRAWLER_PLAYLIST" name="CRAWLER_PLAYLIST"><div class="help">A ballchasing playlist id, such as ranked-doubles or ranked-standard.</div></div>
+            <div class="field"><label for="f-CRAWLER_BANDS">Rank bands</label><input id="f-CRAWLER_BANDS" name="CRAWLER_BANDS"><div class="help">Comma-separated <span class="mono">name:min-rank:max-rank</span>, for example <span class="mono">diamond:diamond-1:diamond-3</span>. Each band is crawled separately and stored under its own folder.</div></div>
+            <div class="field"><label>Months</label><div class="inline"><input id="f-months-first" placeholder="2025-07" style="max-width:120px"><span class="muted">to</span><input id="f-months-last" placeholder="2026-10" style="max-width:120px"></div><div class="help">Inclusive. One crawl window per band per month, months first so every band advances together.</div></div>
+            <div class="field"><label for="f-CRAWLER_PER_WINDOW">Cap per window</label><input id="f-CRAWLER_PER_WINDOW" name="CRAWLER_PER_WINDOW" placeholder="no cap"><div class="help">Stop a window after this many replays. Leave empty to take everything ballchasing lists.</div></div>
+            <h2 style="margin-top:18px">Pipeline</h2>
+            <div class="field"><label for="f-CRAWLER_BATCH">Batch size</label><input id="f-CRAWLER_BATCH" name="CRAWLER_BATCH"><div class="help">Replays per pushed batch. 20,000 is about 22 GB raw and 6 GB decoded on the box; the box pauses if four batches await validation.</div></div>
+            <div class="field"><label for="f-CRAWLER_WORKERS">Download workers</label><input id="f-CRAWLER_WORKERS" name="CRAWLER_WORKERS"><div class="help">Concurrent downloads. The ballchasing rate limits still apply; 4 suits a GC key.</div></div>
+            <div class="actions" style="margin-top:14px"><button class="primary" type="submit">Save settings</button><span class="muted" id="cfg-status"></span></div>
+          </form>
+        </div>
+        <div>
+          <div class="card"><h2>Secrets</h2><div id="secrets" style="display:grid;gap:8px"></div><p class="muted" style="font-size:12px;margin:12px 0 0">These live only in <span class="mono">/etc/rlreplay/lab.env</span> on the lab. The page can tell whether each is set, never what it is. A box receives them over SSH when it is created and never writes them anywhere a snapshot or log could keep.</p></div>
+          <div class="card"><h2>Lab</h2><div class="kv" id="lab-facts"></div></div>
+          <div class="card"><h2>First run</h2><ol style="margin:0;padding-left:18px;color:var(--ink-2);font-size:13px;line-height:1.7"><li>Fill the three secrets in the env file.</li><li>Rebuild the image once (Crawler page).</li><li>Set months to one month and batch size to 500, then Create and start.</li><li>Watch one batch validate on Transfers, then Stop and delete.</li><li>Restore the real months and batch size and start the full run.</li></ol></div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+<div class="tip" id="tip"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
+const n = (x) => (x ?? 0).toLocaleString();
+const gb = (b) => b >= 1e12 ? (b / 1e12).toFixed(2) + " TB" : (b / 1e9).toFixed(b >= 1e11 ? 0 : 1) + " GB";
+const BAND_ORDER = ["bronze", "silver", "gold", "platinum", "diamond", "champion", "gc", "ssl"];
+const bandRank = (b) => { const i = BAND_ORDER.indexOf(b); return i < 0 ? 99 : i; };
+const bandColor = (i) => `var(--band-${(i % 5) + 1})`;
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const monthLabel = (m) => `${MONTHS[+m.slice(5, 7) - 1]} ${m.slice(0, 4)}`;
+const title = (s) => s ? s[0].toUpperCase() + s.slice(1) : s;
+const bandName = (b) => ({gc: "Grand Champion", ssl: "Supersonic Legend"}[b] || title(b));
+let state = null, openOp = null, page = location.hash.slice(1) || "overview";
+
+// ---- theme, routing, toast, tooltip ----
+function toggleTheme() { const r = document.documentElement, cur = r.dataset.theme || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"); r.dataset.theme = cur === "dark" ? "light" : "dark"; try { localStorage.setItem("lab-theme", r.dataset.theme); } catch (e) {} }
+try { const t = localStorage.getItem("lab-theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+function showPage(p) { page = ["overview", "archive", "transfers", "crawler", "settings"].includes(p) ? p : "overview"; document.querySelectorAll(".page").forEach(s => s.classList.toggle("active", s.id === "page-" + page)); document.querySelectorAll("#nav a").forEach(a => a.classList.toggle("active", a.dataset.page === page)); }
+window.addEventListener("hashchange", () => showPage(location.hash.slice(1)));
+showPage(page);
+function toast(msg, bad) { const t = $("#toast"); t.textContent = msg; t.style.background = bad ? "var(--bad)" : "var(--ink)"; t.style.color = bad ? "#fff" : "var(--bg)"; t.classList.add("show"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), 3200); }
+const tip = $("#tip");
+document.addEventListener("mousemove", (e) => { const el = e.target.closest("[data-tip]"); if (el) { tip.textContent = el.dataset.tip; tip.style.opacity = 1; tip.style.left = Math.min(e.clientX + 12, innerWidth - tip.offsetWidth - 8) + "px"; tip.style.top = (e.clientY + 14) + "px"; } else tip.style.opacity = 0; });
+async function api(path, body) { const r = await fetch(path, body ? {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)} : {}); const j = await r.json(); if (!r.ok) throw new Error(j.error || r.statusText); return j; }
+const ago = (s) => s == null ? "never" : s < 60 ? `${s} s ago` : s < 5400 ? `${Math.round(s / 60)} min ago` : `${(s / 3600).toFixed(1)} h ago`;
+const when = (iso) => { if (!iso) return ""; const d = (Date.now() - Date.parse(iso)) / 1000; return d >= 0 && d < 86400 ? ago(Math.round(d)) : iso.slice(0, 16).replace("T", " "); };
+
+// ---- derived ----
+function phaseKind(s) { if (!s) return "off"; const p = s.phase || ""; if (p.startsWith("crawling") || p.startsWith("decoding")) return "good"; if (p === "paused" || p.startsWith("waiting")) return "warn"; if (p === "all windows complete" || p === "stopped") return "off"; return "muted"; }
+function phaseSentence(b) {
+  const s = b.status; if (!s) return ["No status from the box yet", "It reports every half minute once the service is up."];
+  const p = s.phase, m = p.match(/^(crawling|decoding) [^/]+\/([^/]+)\/(\d{4}-\d{2})$/);
+  if (m) return [`${title(m[1])} ${bandName(m[2])} · ${monthLabel(m[3])}`, `${s.per_minute} replays a minute · ${n(s.saved_this_run)} this run · batch ${n(s.current.count)} of ${n(s.batch_size)}${s.unvalidated.length ? ` · ${s.unvalidated.length} awaiting validation` : ""}`];
+  if (p === "paused") return ["Paused", "The box keeps validating and cleaning up; it will not fetch until you resume."];
+  if (p === "waiting for validation") return ["Waiting for the lab to validate", `${s.unvalidated.length} batches are pushed but not yet confirmed; crawling resumes once one clears.`];
+  if (p === "waiting for disk") return ["Waiting for disk space", "The box is near its free-space floor; it resumes when validated batches are cleaned."];
+  if (p === "all windows complete") return ["Every window is complete", "Nothing more to fetch for the configured months. Stop and delete the box when the last batch validates."];
+  if (p === "final push" || p === "stopping") return ["Stopping", "Sealing the last batch and pushing it to the lab."];
+  if (p === "stopped") return ["Stopped", "The service has exited. Create and start to resume from the ledger."];
+  return [title(p), ""];
+}
+
+// ---- render ----
+function render(o) {
+  state = o;
+  const bands = [...new Set(o.windows.map(w => w.band))].sort((a, b) => bandRank(a) - bandRank(b) || a.localeCompare(b));
+  const months = [...new Set(o.windows.map(w => w.month))].sort();
+  const box = o.boxes[0];
+  const complete = o.windows.filter(w => w.listing_complete).length;
+  const validated = o.batches.filter(b => b.validated), pending = o.batches.filter(b => !b.validated && !b.problems), bad = o.batches.filter(b => b.problems);
+
+  // sidebar
+  $("#side-updated").textContent = "updated " + o.now.slice(11, 19) + " UTC";
+  $("#nav-archive").textContent = n(o.totals.replays); $("#nav-transfers").textContent = o.batches.length ? `${pending.length || ""}${bad.length ? " · " + bad.length + " bad" : ""}` : ""; $("#nav-crawler").textContent = box?.status ? box.status.per_minute + "/min" : "";
+  if (o.disk) { $("#side-disk").textContent = gb(o.disk.free) + " free"; $("#side-disk-bar").style.width = (100 * (1 - o.disk.free / o.disk.total)).toFixed(1) + "%"; }
+  const kind = box?.status && box.status_age_s < 300 ? phaseKind(box.status) : "off";
+  $("#side-box").innerHTML = `<span class="pulse ${kind}"></span> ${box ? esc(box.name) + (box.status ? ` · ${esc(box.status.phase.split(" ")[0])}` : "") : "no crawler box"}`;
+  $("#brand-sub").textContent = `${n(o.totals.replays)} replays`;
+
+  // overview
+  const [headline, sub] = box ? phaseSentence(box) : ["No crawler box", "Create one from the Crawler page when the secrets and the image are in place."];
+  const stale = box?.status && box.status_age_s > 300;
+  $("#hero").innerHTML = `<div><div class="state"><span class="pulse ${kind}"></span>${esc(headline)}${stale ? ` <span class="chip warn">last report ${ago(box.status_age_s)}</span>` : ""}</div><div class="sub">${esc(sub)}</div></div>
+    <div class="actions">${box?.status ? controlButtons(box) : `<button class="primary" onclick="location.hash='crawler'">Go to Crawler</button>`}</div>`;
+  $("#ov-tiles").innerHTML = tile("Replays in the ledger", n(o.totals.replays), `${n(o.totals.decoded)} decoded on disk · ${gb(o.totals.bytes)}`) +
+    tile("Windows complete", `${complete}<small> / ${o.windows.length}</small>`, `<div class="progress"><i style="width:${o.windows.length ? (100 * complete / o.windows.length).toFixed(1) : 0}%"></i></div>${o.windows.length - complete} still open`) +
+    tile("Batches", `${n(validated.length)}<small> validated</small>`, `${pending.length} pending${bad.length ? ` · <span style="color:var(--bad)">${bad.length} bad</span>` : ""} · ${gb(validated.reduce((a, b) => a + b.bytes, 0))} confirmed`) +
+    tile("Lab disk", gb(o.disk?.free || 0), `free of ${gb(o.disk?.total || 0)}`);
+  $("#ov-rate").innerHTML = box?.history?.length > 1 ? rateChart(box.history) : `<div class="empty">No rate history yet. Points appear as the box reports.</div>`;
+  $("#ov-bands").innerHTML = bands.length ? `<table>${bands.map((b, i) => { const ws = o.windows.filter(w => w.band === b); const tot = ws.reduce((a, w) => a + w.replays, 0); return `<tr><td><i style="display:inline-block;width:10px;height:10px;border-radius:3px;background:${bandColor(i)};margin-right:8px;vertical-align:-1px"></i>${esc(bandName(b))}</td><td class="num">${n(tot)}</td><td class="num muted">${ws.filter(w => w.listing_complete).length}/${ws.length} months</td></tr>`; }).join("")}</table>` : `<div class="empty">Nothing in the ledger yet.</div>`;
+  const guide = [];
+  if (!Object.values(o.secrets).every(Boolean)) guide.push(`Fill the missing secrets in the lab env file (${Object.entries(o.secrets).filter(([k, v]) => !v).map(([k]) => k).join(", ")}).`);
+  if (!box) guide.push("Rebuild the image once, then create the first box from the Crawler page. A smoke test with one month and a 500 batch is a good first run.");
+  if (bad.length) guide.push(`${bad.length} batch${bad.length > 1 ? "es" : ""} failed validation. The box will push and validate again on its own; look at Transfers for the reason.`);
+  $("#ov-guide").hidden = !guide.length; $("#ov-guide").innerHTML = `<h2>Suggested next steps</h2><ol style="margin:0;padding-left:18px;color:var(--ink-2);line-height:1.8">${guide.map(g => `<li>${esc(g)}</li>`).join("")}</ol>`;
+
+  // archive
+  $("#ar-legend").innerHTML = bands.map((b, i) => `<span><i style="background:${bandColor(i)}"></i>${esc(bandName(b))}</span>`).join("");
+  $("#ar-chart").innerHTML = months.length ? stackedChart(o.windows, months, bands) : `<div class="empty"><b>Nothing in the ledger yet</b>The chart fills in as the first batches land.</div>`;
+  const max = Math.max(1, ...o.windows.map(w => w.replays));
+  const cell = (m, b, i) => { const w = o.windows.find(x => x.month === m && x.band === b); if (!w) return `<td class="muted">—</td>`; return `<td><div class="cell" data-tip="${n(w.decoded)} decoded · ${gb(w.bytes)}${w.listing_complete ? " · listing complete" : " · still open"}"><div class="spark"><i style="width:${(100 * w.replays / max).toFixed(1)}%;background:${bandColor(i)}"></i></div><b>${n(w.replays)}</b><span class="tick">${w.listing_complete ? "✓" : "&nbsp;"}</span></div></td>`; };
+  $("#ar-table").innerHTML = months.length ? `<table><thead><tr><th>month</th>${bands.map(b => `<th>${esc(bandName(b))}</th>`).join("")}<th class="num">total</th></tr></thead><tbody>` +
+    months.map(m => `<tr><td>${monthLabel(m)}</td>${bands.map((b, i) => cell(m, b, i)).join("")}<td class="num">${n(o.windows.filter(w => w.month === m).reduce((a, w) => a + w.replays, 0))}</td></tr>`).join("") +
+    `<tr class="total"><td>all months</td>${bands.map(b => `<td>${n(o.windows.filter(w => w.band === b).reduce((a, w) => a + w.replays, 0))}</td>`).join("")}<td class="num">${n(o.totals.replays)}</td></tr></tbody></table>` : "";
+
+  // transfers
+  $("#tr-tiles").innerHTML = tile("Validated", n(validated.length), `${gb(validated.reduce((a, b) => a + b.bytes, 0))} · ${n(validated.reduce((a, b) => a + b.count, 0))} replays confirmed on the lab`) + tile("Pending", n(pending.length), pending.length ? "pushed or pushing; the lab validates within minutes" : "nothing in flight") + tile("Failed validation", n(bad.length), bad.length ? "the box retries these after ten minutes" : "none") + tile("Failed decodes", n(o.batches.reduce((a, b) => a + b.failed, 0)), "replays neither decoder could read; never refetched");
+  $("#tr-table").innerHTML = o.batches.length ? `<table><thead><tr><th>batch</th><th>created</th><th class="num">replays</th><th class="num">size</th><th>windows</th><th>status</th></tr></thead><tbody>` + o.batches.map(b => `<tr><td class="mono">${esc(b.name)}</td><td data-tip="${esc(b.created)}">${when(b.created)}</td><td class="num">${n(b.count)}${b.failed ? ` <span class="muted" data-tip="replays neither decoder could read">(${b.failed} failed)</span>` : ""}</td><td class="num">${gb(b.bytes)}</td><td class="muted">${esc(b.windows.map(w => w.replace("/", " ")).join(", "))}</td><td>${b.validated ? `<span class="chip good" data-tip="validated ${esc(b.validated)}">✓ validated</span>` : b.problems ? `<span class="chip bad">✕ failed</span> <details><summary>why</summary><pre>${esc(b.problems.map(p => JSON.stringify(p)).join("\n"))}</pre></details>` : `<span class="chip warn">… pending</span>`}</td></tr>`).join("") + "</tbody></table>" : `<div class="empty"><b>No batches yet</b>The first one appears when the box has decoded a full batch, or when it stops.</div>`;
+
+  // crawler
+  $("#cr-actions").innerHTML = box?.status ? controlButtons(box) : "";
+  $("#cr-body").innerHTML = box ? crawlerBody(box) : `<div class="card"><div class="empty"><b>No crawler box has reported yet</b>Create one below. It appears here as soon as it sends its first status.</div></div>`;
+  $("#ops").innerHTML = o.ops.slice().reverse().map(op => `<li class="${op.id === openOp ? "open" : ""}" onclick="showLog('${op.id}')"><span class="chip ${op.returncode == null ? "warn" : op.returncode === 0 ? "good" : "bad"}">${op.returncode == null ? "running" : op.returncode === 0 ? "done" : "failed"}</span><span>${esc({up: "Create and start", down: "Stop and delete", image: "Rebuild image"}[op.action] || op.action)} <span class="muted mono">${esc(op.args.join(" "))}</span></span><span class="muted">${when(op.started)}</span></li>`).join("") || `<li class="muted" style="cursor:default;grid-template-columns:1fr">No operations run from here yet.</li>`;
+  if (openOp) showLog(openOp, true);
+
+  // settings
+  if (!document.activeElement?.closest?.("#config")) {
+    for (const k of ["CRAWLER_NAME", "CRAWLER_TYPE", "CRAWLER_LOCATION", "CRAWLER_PLAYLIST", "CRAWLER_BANDS", "CRAWLER_PER_WINDOW", "CRAWLER_BATCH", "CRAWLER_WORKERS"]) { const el = $("#f-" + k); if (el) { if (el.tagName === "SELECT" && ![...el.options].some(x => x.value === o.config[k])) el.add(new Option(o.config[k], o.config[k])); el.value = o.config[k]; } }
+    const [first, last] = (o.config.CRAWLER_MONTHS || "..").split(".."); $("#f-months-first").value = first || ""; $("#f-months-last").value = last || "";
+  }
+  $("#secrets").innerHTML = Object.entries(o.secrets).map(([k, v]) => `<div style="display:flex;justify-content:space-between;align-items:center"><span class="mono">${k}</span><span class="chip ${v ? "good" : "bad"}">${v ? "set" : "missing"}</span></div>`).join("");
+  $("#lab-facts").innerHTML = [["archive root", o.root], ["push user", o.config.LAB_USER], ["tailnet address", o.config.LAB_TS_HOST], ["Hetzner ssh key", o.config.HCLOUD_SSH_KEY], ["repository", o.config.LAB_REPO]].map(([k, v]) => `<span class="k">${k}</span><span class="mono">${esc(v)}</span>`).join("");
+}
+const tile = (k, v, s) => `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s}</div></div>`;
+function controlButtons(b) { const c = b.control?.command || "run"; return `${c === "pause" ? `<button class="primary" onclick="control('${esc(b.name)}','run')">Resume crawling</button>` : `<button onclick="control('${esc(b.name)}','pause')">Pause</button>`}<button class="danger" onclick="control('${esc(b.name)}','stop')" data-tip="finish the page, seal and push the current batch, then exit; the server stays until you delete it">Stop</button>`; }
+function crawlerBody(b) {
+  const s = b.status; if (!s) return `<div class="card"><div class="empty"><b>${esc(b.name)} has not reported yet</b>control is set to <span class="mono">${esc(b.control?.command || "run")}</span></div></div>`;
+  const pct = Math.min(100, 100 * s.current.count / s.batch_size), used = 1 - s.disk.free / s.disk.total, r = 30, C = 2 * Math.PI * r;
+  const win = s.windows || [];
+  return `<div class="card"><div class="hero"><div><div class="state"><span class="pulse ${phaseKind(s)}"></span>${esc(phaseSentence(b)[0])}</div><div class="sub">${esc(phaseSentence(b)[1])}</div></div><div class="muted" style="text-align:right;font-size:12px">reported ${ago(b.status_age_s)}<br>up ${(s.uptime_s / 3600).toFixed(1)} h · control: <b>${esc(b.control?.command || "run")}</b></div></div>
+    <div class="tiles" style="margin-top:16px">
+      ${tile("Rate", `${s.per_minute}<small> /min</small>`, `${n(s.saved_this_run)} replays this run`)}
+      ${tile("Current batch", `${n(s.current.count)}<small> / ${n(s.batch_size)}</small>`, `<div class="progress"><i style="width:${pct.toFixed(1)}%"></i></div>${s.current.failed} failed decodes`)}
+      ${tile("Awaiting validation", `${s.unvalidated.length}<small> / 4</small>`, s.unvalidated.length >= 4 ? `<span style="color:var(--warn)">crawling paused until one clears</span>` : `${s.sealed.length} batches sealed on the box`)}
+      <div class="tile" style="display:flex;gap:14px;align-items:center"><svg class="ring" viewBox="0 0 72 72"><circle class="track" cx="36" cy="36" r="${r}"/><circle class="val" cx="36" cy="36" r="${r}" stroke-dasharray="${(C * used).toFixed(1)} ${C.toFixed(1)}" style="stroke:${used > .85 ? "var(--bad)" : used > .7 ? "var(--warn)" : "var(--accent)"}"/></svg><div><div class="k">Box disk</div><div class="v" style="font-size:18px">${gb(s.disk.free)}</div><div class="s">free of ${gb(s.disk.total)}</div></div></div>
+    </div></div>
+    <div class="grid2">
+      <div class="card"><h2>Batches on the box</h2>${s.sealed.length ? `<table>${s.sealed.slice().reverse().map(x => `<tr><td class="mono">${esc(x.name)}</td><td class="num">${n(x.count)}</td><td>${x.validated ? `<span class="chip good">✓ validated${x.cleaned ? ", cleaned" : ""}</span>` : x.bad ? `<span class="chip bad">✕ failed · retry ${x.attempts}</span>` : `<span class="chip warn">… pending</span>`}</td></tr>`).join("")}</table>` : `<div class="muted">Nothing sealed yet.</div>`}</div>
+      <div class="card"><h2>Windows <span class="hint">as the box sees them</span></h2>${win.length ? `<div style="max-height:260px;overflow:auto"><table>${win.filter(w => w.done || !w.listing_complete).slice(0, 60).map(w => `<tr><td class="mono">${esc(w.key.split("/").slice(1).join(" · "))}</td><td class="num">${n(w.done)}</td><td>${w.listing_complete ? `<span class="chip good">complete</span>` : `<span class="chip muted">open</span>`}</td></tr>`).join("")}</table></div>` : `<div class="muted">No window list in the last report.</div>`}</div>
+    </div>
+    <div class="card"><h2>Last crawler summary</h2><div class="mono muted" style="word-break:break-all">${esc(s.crawler || "—")}</div></div>`;
+}
+
+// ---- charts (inline SVG, no deps) ----
+function stackedChart(windows, months, bands) {
+  const W = 900, H = 240, L = 48, R = 10, T = 12, B = 34, iw = W - L - R, ih = H - T - B;
+  const totals = months.map(m => windows.filter(w => w.month === m).reduce((a, w) => a + w.replays, 0));
+  const max = Math.max(1, ...totals), step = niceStep(max / 4), ymax = Math.ceil(max / step) * step;
+  const bw = iw / months.length, gap = Math.min(6, bw * .2);
+  let g = "";
+  for (let y = 0; y <= ymax; y += step) { const py = T + ih - ih * y / ymax; g += `<line class="grid" x1="${L}" x2="${W - R}" y1="${py}" y2="${py}"/><text x="${L - 6}" y="${py + 3}" text-anchor="end">${y >= 1000 ? (y / 1000) + "k" : y}</text>`; }
+  let bars = "";
+  months.forEach((m, mi) => { let y0 = 0; bands.forEach((b, bi) => { const w = windows.find(x => x.month === m && x.band === b); if (!w || !w.replays) return; const h = ih * w.replays / ymax, y = T + ih - ih * (y0 + w.replays) / ymax; bars += `<rect x="${L + mi * bw + gap / 2}" y="${y}" width="${bw - gap}" height="${Math.max(h - 1, 0)}" rx="2" fill="${bandColor(bi)}" data-tip="${bandName(b)} · ${monthLabel(m)}: ${n(w.replays)} replays"/>`; y0 += w.replays; });
+    if (mi % Math.ceil(months.length / 12) === 0) bars += `<text x="${L + mi * bw + bw / 2}" y="${H - 12}" text-anchor="middle">${MONTHS[+m.slice(5, 7) - 1]}${m.endsWith("-01") || mi === 0 ? " ’" + m.slice(2, 4) : ""}</text>`; });
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}">${g}<line class="axis" x1="${L}" x2="${W - R}" y1="${T + ih}" y2="${T + ih}"/>${bars}</svg>`;
+}
+function rateChart(history) {
+  const pts = history.filter(h => h.rate != null && h.t).slice(-360);
+  if (pts.length < 2) return `<div class="empty">Not enough points yet.</div>`;
+  const W = 700, H = 180, L = 40, R = 10, T = 10, B = 26, iw = W - L - R, ih = H - T - B;
+  const t0 = Date.parse(pts[0].t), t1 = Date.parse(pts[pts.length - 1].t) || t0 + 1, max = Math.max(10, ...pts.map(p => p.rate)), step = niceStep(max / 3), ymax = Math.ceil(max / step) * step;
+  const x = (p) => L + iw * (Date.parse(p.t) - t0) / Math.max(1, t1 - t0), y = (v) => T + ih - ih * v / ymax;
+  let g = ""; for (let v = 0; v <= ymax; v += step) g += `<line class="grid" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text x="${L - 6}" y="${y(v) + 3}" text-anchor="end">${v}</text>`;
+  const d = pts.map((p, i) => `${i ? "L" : "M"}${x(p).toFixed(1)},${y(p.rate).toFixed(1)}`).join(" ");
+  const area = d + ` L${x(pts[pts.length - 1]).toFixed(1)},${y(0)} L${x(pts[0]).toFixed(1)},${y(0)} Z`;
+  const last = pts[pts.length - 1], hours = ((t1 - t0) / 3.6e6).toFixed(1);
+  const dots = pts.filter((p, i) => i % Math.ceil(pts.length / 40) === 0 || i === pts.length - 1).map(p => `<circle cx="${x(p).toFixed(1)}" cy="${y(p.rate).toFixed(1)}" r="7" fill="transparent" data-tip="${p.t.slice(11, 16)} UTC · ${p.rate}/min · ${esc(p.phase || "")}"/>`).join("");
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}">${g}<path d="${area}" fill="var(--accent)" opacity=".12"/><path d="${d}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/>${dots}<circle cx="${x(last).toFixed(1)}" cy="${y(last.rate).toFixed(1)}" r="4" fill="var(--accent)" stroke="var(--surface)" stroke-width="2"/><text x="${L}" y="${H - 8}">${pts[0].t.slice(11, 16)} UTC</text><text x="${W - R}" y="${H - 8}" text-anchor="end">${hours} h · now ${last.rate}/min</text></svg>`;
+}
+function niceStep(raw) { const p = Math.pow(10, Math.floor(Math.log10(Math.max(raw, 1)))), f = raw / p; return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * p; }
+
+// ---- actions ----
+async function control(box, command) { try { await api("/api/control", {box, command}); toast({run: "Resuming: the box picks it up within one page", pause: "Pausing after the current page", stop: "Stopping: the box seals, pushes and exits"}[command]); refresh(); } catch (e) { toast(e.message, true); } }
+async function saveConfig(ev) {
+  ev.preventDefault(); const f = ev.target; const values = {}; for (const k of ["CRAWLER_NAME", "CRAWLER_TYPE", "CRAWLER_LOCATION", "CRAWLER_PLAYLIST", "CRAWLER_BANDS", "CRAWLER_PER_WINDOW", "CRAWLER_BATCH", "CRAWLER_WORKERS"]) values[k] = $("#f-" + k).value.trim();
+  const a = $("#f-months-first").value.trim(), b = $("#f-months-last").value.trim(); if (!/^\d{4}-\d{2}$/.test(a) || !/^\d{4}-\d{2}$/.test(b) || a > b) return toast("Months must look like 2025-07 and be in order", true); values.CRAWLER_MONTHS = `${a}..${b}`;
+  try { await api("/api/config", {values}); $("#cfg-status").textContent = "saved " + new Date().toLocaleTimeString(); toast("Settings saved to the lab env file"); refresh(); } catch (e) { toast(e.message, true); }
+}
+async function run(action, confirmText) { if (confirmText && !confirm(`This will ${confirmText}. Continue?`)) return; try { const op = await api("/api/run", {action}); toast("Started; the log follows below"); openOp = op.id; location.hash = "crawler"; refresh(); } catch (e) { toast(e.message, true); } }
+async function showLog(id, quiet) { openOp = id; try { const r = await api(`/api/log?op=${encodeURIComponent(id)}`); const pre = $("#oplog"); pre.hidden = false; const atEnd = pre.scrollTop + pre.clientHeight >= pre.scrollHeight - 20; pre.textContent = r.log || "(no output yet)"; if (!quiet || atEnd) pre.scrollTop = pre.scrollHeight; } catch (e) { if (!quiet) toast(e.message, true); } }
+async function refresh() { try { render(await api("/api/overview")); } catch (e) { $("#side-updated").textContent = "cannot reach the lab: " + e.message; } }
+refresh(); setInterval(refresh, 10000);
+</script>
+</body>
+</html>

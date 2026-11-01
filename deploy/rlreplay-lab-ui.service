@@ -1,0 +1,19 @@
+[Unit]
+Description=rlreplay lab UI (control plane for the replay archive and the cloud crawler)
+After=network-online.target tailscaled.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Runs as root because it launches crawler_up.sh / crawler_down.sh, which read the secrets in
+# /etc/rlreplay/lab.env and talk to Hetzner. It only ever listens on the tailnet address.
+User=root
+WorkingDirectory=/opt/rlreplay
+Environment=RLREPLAY_LAB_ENV=/etc/rlreplay/lab.env
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/usr/bin/python3 -m lab.server
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

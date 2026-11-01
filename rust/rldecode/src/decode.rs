@@ -61,6 +61,35 @@ impl<V> ActorTable<V> {
 
 const TOUCH_DV: f64 = 500.0;
 
+/// Camera profile, `TAGame.CameraSettingsActor_TA:ProfileSettings` (linked to a PRI through
+/// `TAGame.CameraSettingsActor_TA:PRI`) or `TAGame.PRI_TA:CameraSettings` on the PRI itself.
+#[derive(Clone, Copy, Debug)]
+struct Camera {
+    fov: f32,
+    height: f32,
+    angle: f32,
+    distance: f32,
+    stiffness: f32,
+    swivel: f32,
+    transition: Option<f32>,
+}
+
+impl Camera {
+    fn from(c: &boxcars::CamSettings) -> Camera {
+        Camera {
+            fov: c.fov, height: c.height, angle: c.angle, distance: c.distance,
+            stiffness: c.stiffness, swivel: c.swivel, transition: c.transition,
+        }
+    }
+    fn json(&self) -> Value {
+        json!({
+            "fov": f32_json(self.fov), "height": f32_json(self.height), "angle": f32_json(self.angle),
+            "distance": f32_json(self.distance), "stiffness": f32_json(self.stiffness),
+            "swivel": f32_json(self.swivel), "transition": self.transition.map(f32_json),
+        })
+    }
+}
+
 #[derive(Clone, Debug)]
 struct Player {
     name: Option<String>,
@@ -68,6 +97,26 @@ struct Player {
     uid: Option<String>,
     team_actor: Option<i32>,
     team: Option<i32>,
+    // ---- wide-decode extras (meta only, never affect the narrow arrays) ----
+    /// Loadout.body for the blue and orange loadouts (ClientLoadouts) or the single
+    /// ClientLoadout (stored in both); last seen.
+    body: Option<(u32, u32)>,
+    camera: Option<Camera>,
+    match_score: Option<i32>,
+    match_goals: Option<i32>,
+    match_assists: Option<i32>,
+    match_saves: Option<i32>,
+    match_shots: Option<i32>,
+}
+
+impl Player {
+    fn new() -> Player {
+        Player {
+            name: None, platform: None, uid: None, team_actor: None, team: None,
+            body: None, camera: None, match_score: None, match_goals: None,
+            match_assists: None, match_saves: None, match_shots: None,
+        }
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -76,6 +125,10 @@ struct Rb {
     vel: [f32; 3],
     /// Python-side float64 velocity, only needed for the ball-hit comparison.
     vel64: [f64; 3],
+    /// Quaternion x, y, z, w (`RigidBody.rotation`).
+    rot: [f32; 4],
+    /// `RigidBody.angular_velocity`, zero when absent exactly like `vel`.
+    angvel: [f32; 3],
 }
 
 fn rb_from(rb: &RigidBody) -> Rb {
@@ -88,14 +141,72 @@ fn rb_from(rb: &RigidBody) -> Rb {
         Some(v) => [f32_json(v.x), f32_json(v.y), f32_json(v.z)],
         None => [0.0, 0.0, 0.0],
     };
-    Rb { loc, vel, vel64 }
+    let rot = [rb.rotation.x, rb.rotation.y, rb.rotation.z, rb.rotation.w];
+    let angvel = match rb.angular_velocity {
+        Some(v) => [v.x, v.y, v.z],
+        None => [0.0, 0.0, 0.0],
+    };
+    Rb { loc, vel, vel64, rot, angvel }
+}
+
+/// Car component kinds carried in `cars_ctrl[..., 4..8]`, in that order. The kind comes from the
+/// component's new-actor object name (`Archetypes.CarComponents.CarComponent_<Kind>`).
+const COMP_BOOST: usize = 0;
+const COMP_JUMP: usize = 1;
+const COMP_DOUBLE_JUMP: usize = 2;
+const COMP_DODGE: usize = 3;
+const N_COMP: usize = 4;
+
+fn component_kind(obj: &str) -> Option<usize> {
+    let tail = obj.strip_prefix("Archetypes.CarComponents.CarComponent_")?;
+    match tail {
+        "Boost" => Some(COMP_BOOST),
+        "Jump" => Some(COMP_JUMP),
+        "DoubleJump" => Some(COMP_DOUBLE_JUMP),
+        "Dodge" => Some(COMP_DODGE),
+        _ => None, // FlipCar and anything newer are not carried
+    }
+}
+
+/// Per-car driver inputs (`TAGame.Vehicle_TA:*`), NaN until first replicated; they persist
+/// until the car actor is deleted, like boost.
+#[derive(Clone, Copy)]
+struct Ctrl {
+    throttle: f32,
+    steer: f32,
+    handbrake: f32,
+    driving: f32,
+    /// Component actor ids by kind, so `ReplicatedActive` is read at snapshot time.
+    comps: [Option<i32>; N_COMP],
+}
+
+impl Ctrl {
+    fn new() -> Ctrl {
+        Ctrl { throttle: f32::NAN, steer: f32::NAN, handbrake: f32::NAN, driving: f32::NAN, comps: [None; N_COMP] }
+    }
+}
+
+pub const CTRL_WIDTH: usize = 8;
+
+
+/// Everything a car row carries beyond the narrow `cars` columns.
+#[derive(Clone, Copy)]
+struct CarExtra {
+    rot: [f32; 4],
+    angvel: [f32; 3],
+    ctrl: [f32; CTRL_WIDTH],
 }
 
 /// An insertion-ordered map with Python `dict` semantics (update in place keeps position,
 /// pop then re-insert moves to the end). Sizes are tiny (cars on the pitch), so a Vec is fine.
-#[derive(Default)]
 struct OrderedMap<V> {
     items: Vec<(i32, V)>,
+}
+
+impl<V> Default for OrderedMap<V> {
+    fn default() -> Self {
+        OrderedMap { items: Vec::new() }
+    }
 }
 
 impl<V> OrderedMap<V> {
@@ -138,6 +249,14 @@ pub struct Decoded {
     pub ball: Vec<f32>,     // T x 6
     pub ball_hit: Vec<bool>,
     pub cars: Vec<f32>,     // T x P x 7
+    // ---- wide layout, written after the narrow arrays ----
+    #[allow(dead_code)]
+    pub ball_rot: Vec<f32>,    // T x 4 (decoded, not written)
+    pub ball_angvel: Vec<f32>, // T x 3
+    pub cars_rot: Vec<f32>,    // T x P x 4
+    pub cars_angvel: Vec<f32>, // T x P x 3
+    pub cars_ctrl: Vec<f32>,   // T x P x 8
+    pub overtime: Vec<bool>,   // T
     pub meta: Value,
 }
 
@@ -217,13 +336,17 @@ pub fn decode(replay: &Replay, replay_id: &str) -> Decoded {
     let mut round_start_arr = vec![f64::NAN; t_len];
     let mut seconds = vec![-1i16; t_len];
     let mut ball = vec![f32::NAN; t_len * 6];
+    let mut ball_rot_arr = vec![f32::NAN; t_len * 4];
+    let mut ball_angvel_arr = vec![f32::NAN; t_len * 3];
+    let mut overtime_arr = vec![false; t_len];
 
     // slots / players / per_frame_cars / demos from decode.decode_json
     let mut slots: ActorTable<usize> = ActorTable::new();
     let mut n_slots = 0usize;
     let mut player_rows: Vec<PlayerRow> = Vec::new();
-    let mut per_frame: Vec<Vec<(usize, [f32; 3], [f32; 3], Option<f64>)>> = Vec::with_capacity(t_len);
+    let mut per_frame: Vec<Vec<(usize, [f32; 3], [f32; 3], Option<f64>, CarExtra)>> = Vec::with_capacity(t_len);
     let mut demos_out: Vec<Value> = Vec::new();
+    let mut pickups_out: Vec<Value> = Vec::new();
 
     // iter_snapshots state
     let mut actor_seen: ActorTable<()> = ActorTable::new(); // never shrinks, like the Python dict
@@ -241,8 +364,24 @@ pub fn decode(replay: &Replay, replay_id: &str) -> Decoded {
     // resent[aid] == frame generation marks a keyframe re-send of an existing actor
     let mut resent: ActorTable<usize> = ActorTable::new();
     // snapshot cars: pri -> (loc, vel, boost), insertion ordered like `cars = {}`
-    let mut snap_cars: OrderedMap<([f32; 3], [f32; 3], Option<f64>)> = OrderedMap::default();
+    let mut snap_cars: OrderedMap<([f32; 3], [f32; 3], Option<f64>, CarExtra)> = OrderedMap::default();
     let mut frame_demos: Vec<(Option<i32>, Option<i32>)> = Vec::new();
+
+    // ---- wide-decode state (reads only; never feeds back into the narrow arrays) ----
+    let mut overtime = false;
+    // component actor -> kind (from its new-actor object name)
+    let mut comp_kind: ActorTable<usize> = ActorTable::new();
+    // component actor -> last ReplicatedActive byte
+    let mut comp_active: ActorTable<u8> = ActorTable::new();
+    // car actor -> driver inputs and linked component actors
+    let mut car_ctrl: ActorTable<Ctrl> = ActorTable::new();
+    // camera-settings actor -> (linked PRI, last ProfileSettings)
+    let mut cam_pri: ActorTable<i32> = ActorTable::new();
+    let mut cam_settings: ActorTable<Camera> = ActorTable::new();
+    // pickup (boost pad) actor -> object name tail such as `VehiclePickup_Boost_TA_27`
+    let mut pad_name: ActorTable<String> = ActorTable::new();
+    // pickups seen this frame: (pad actor, instigator car actor)
+    let mut frame_pickups: Vec<(i32, i32)> = Vec::new();
 
     for (index, frame) in frames.iter().enumerate() {
         let t = f32_json(frame.time);
@@ -266,9 +405,7 @@ pub fn decode(replay: &Replay, replay_id: &str) -> Decoded {
             let obj = objects.get(obj_idx).map(String::as_str).unwrap_or("");
             if obj == "TAGame.Default__PRI_TA" {
                 if !players.contains(aid) {
-                    players.insert(aid, Player {
-                        name: None, platform: None, uid: None, team_actor: None, team: None,
-                    });
+                    players.insert(aid, Player::new());
                 }
             } else if obj.starts_with("Archetypes.Ball.") {
                 ball_actors.insert(aid, ());
@@ -276,11 +413,20 @@ pub fn decode(replay: &Replay, replay_id: &str) -> Decoded {
                 team_index.insert(aid, 0);
             } else if obj.ends_with("Teams.Team1") {
                 team_index.insert(aid, 1);
+            } else if let Some(kind) = component_kind(obj) {
+                comp_kind.insert(aid, kind);
+                if !is_resent(&resent, aid) {
+                    comp_active.remove(aid);
+                }
+            } else if obj.contains(".VehiclePickup_") {
+                let tail = obj.rsplit('.').next().unwrap_or(obj);
+                pad_name.insert(aid, tail.to_string());
             }
         }
 
         let mut ball_hit = false;
         frame_demos.clear();
+        frame_pickups.clear();
         for upd in &frame.updated_actors {
             let aid = upd.actor_id.0;
             let key = objects.get(upd.object_id.0 as usize).map(String::as_str).unwrap_or("");
@@ -321,6 +467,124 @@ pub fn decode(replay: &Replay, replay_id: &str) -> Decoded {
                 "TAGame.CarComponent_TA:Vehicle" => {
                     if let Attribute::ActiveActor(link) = &upd.attribute {
                         boost_car.insert(aid, link.actor.0);
+                        // Wide: remember the component on its car, by kind.
+                        if let Some(&kind) = comp_kind.get(aid) {
+                            let car = link.actor.0;
+                            if car >= 0 {
+                                if !car_ctrl.contains(car) {
+                                    car_ctrl.insert(car, Ctrl::new());
+                                }
+                                car_ctrl.get_mut(car).unwrap().comps[kind] = Some(aid);
+                            }
+                        }
+                    }
+                }
+                // ---- wide-decode attributes (no effect on the narrow arrays) ----
+                "TAGame.CarComponent_TA:ReplicatedActive" => {
+                    if let Attribute::Byte(b) = &upd.attribute {
+                        comp_active.insert(aid, *b);
+                    }
+                }
+                "TAGame.Vehicle_TA:ReplicatedThrottle" => {
+                    if let Attribute::Byte(b) = &upd.attribute {
+                        car_ctrl_mut(&mut car_ctrl, aid).throttle = *b as f32;
+                    }
+                }
+                "TAGame.Vehicle_TA:ReplicatedSteer" => {
+                    if let Attribute::Byte(b) = &upd.attribute {
+                        car_ctrl_mut(&mut car_ctrl, aid).steer = *b as f32;
+                    }
+                }
+                "TAGame.Vehicle_TA:bReplicatedHandbrake" => {
+                    if let Attribute::Boolean(b) = &upd.attribute {
+                        car_ctrl_mut(&mut car_ctrl, aid).handbrake = *b as u8 as f32;
+                    }
+                }
+                "TAGame.Vehicle_TA:bDriving" => {
+                    if let Attribute::Boolean(b) = &upd.attribute {
+                        car_ctrl_mut(&mut car_ctrl, aid).driving = *b as u8 as f32;
+                    }
+                }
+                "TAGame.GameEvent_Soccar_TA:bOverTime" => {
+                    if let Attribute::Boolean(b) = &upd.attribute {
+                        overtime = *b;
+                    }
+                }
+                "TAGame.VehiclePickup_TA:ReplicatedPickupData" => {
+                    if let Attribute::Pickup(p) = &upd.attribute {
+                        if p.picked_up {
+                            if let Some(car) = p.instigator {
+                                frame_pickups.push((aid, car.0));
+                            }
+                        }
+                    }
+                }
+                "TAGame.VehiclePickup_TA:NewReplicatedPickupData" => {
+                    // picked_up is an odd counter per pickup; 255 with no instigator is the
+                    // pad respawning, which is not a pickup.
+                    if let Attribute::PickupNew(p) = &upd.attribute {
+                        if p.picked_up != 0 {
+                            if let Some(car) = p.instigator {
+                                frame_pickups.push((aid, car.0));
+                            }
+                        }
+                    }
+                }
+                "TAGame.PRI_TA:ClientLoadouts" => {
+                    if let (Some(p), Attribute::TeamLoadout(l)) = (players.get_mut(aid), &upd.attribute) {
+                        p.body = Some((l.blue.body, l.orange.body));
+                    }
+                }
+                "TAGame.PRI_TA:ClientLoadout" => {
+                    if let (Some(p), Attribute::Loadout(l)) = (players.get_mut(aid), &upd.attribute) {
+                        p.body = Some((l.body, l.body));
+                    }
+                }
+                "TAGame.PRI_TA:CameraSettings" => {
+                    if let (Some(p), Attribute::CamSettings(c)) = (players.get_mut(aid), &upd.attribute) {
+                        p.camera = Some(Camera::from(c));
+                    }
+                }
+                "TAGame.CameraSettingsActor_TA:ProfileSettings" => {
+                    if let Attribute::CamSettings(c) = &upd.attribute {
+                        let cam = Camera::from(c);
+                        cam_settings.insert(aid, cam);
+                        if let Some(p) = cam_pri.get(aid).copied().and_then(|pri| players.get_mut(pri)) {
+                            p.camera = Some(cam);
+                        }
+                    }
+                }
+                "TAGame.CameraSettingsActor_TA:PRI" => {
+                    if let Attribute::ActiveActor(link) = &upd.attribute {
+                        cam_pri.insert(aid, link.actor.0);
+                        if let (Some(cam), Some(p)) = (cam_settings.get(aid).copied(), players.get_mut(link.actor.0)) {
+                            p.camera = Some(cam);
+                        }
+                    }
+                }
+                "TAGame.PRI_TA:MatchScore" => {
+                    if let (Some(p), Attribute::Int(i)) = (players.get_mut(aid), &upd.attribute) {
+                        p.match_score = Some(*i);
+                    }
+                }
+                "TAGame.PRI_TA:MatchGoals" => {
+                    if let (Some(p), Attribute::Int(i)) = (players.get_mut(aid), &upd.attribute) {
+                        p.match_goals = Some(*i);
+                    }
+                }
+                "TAGame.PRI_TA:MatchAssists" => {
+                    if let (Some(p), Attribute::Int(i)) = (players.get_mut(aid), &upd.attribute) {
+                        p.match_assists = Some(*i);
+                    }
+                }
+                "TAGame.PRI_TA:MatchSaves" => {
+                    if let (Some(p), Attribute::Int(i)) = (players.get_mut(aid), &upd.attribute) {
+                        p.match_saves = Some(*i);
+                    }
+                }
+                "TAGame.PRI_TA:MatchShots" => {
+                    if let (Some(p), Attribute::Int(i)) = (players.get_mut(aid), &upd.attribute) {
+                        p.match_shots = Some(*i);
                     }
                 }
                 "Engine.Pawn:PlayerReplicationInfo" => {
@@ -415,6 +679,11 @@ pub fn decode(replay: &Replay, replay_id: &str) -> Decoded {
             if ball_actors.remove(d).is_some() {
                 ball_state = None;
             }
+            car_ctrl.remove(d);
+            comp_active.remove(d);
+            comp_kind.remove(d);
+            cam_pri.remove(d);
+            cam_settings.remove(d);
         }
 
         snap_cars.items.clear();
@@ -428,7 +697,20 @@ pub fn decode(replay: &Replay, replay_id: &str) -> Decoded {
                     }
                 }
             }
-            snap_cars.insert(*pri, (rb.loc, rb.vel, car_boost.get(*car).copied()));
+            let mut ctrl = [f32::NAN; CTRL_WIDTH];
+            if let Some(c) = car_ctrl.get(*car) {
+                ctrl[0] = c.throttle;
+                ctrl[1] = c.steer;
+                ctrl[2] = c.handbrake;
+                ctrl[3] = c.driving;
+                for (kind, comp) in c.comps.iter().enumerate() {
+                    if let Some(&v) = comp.and_then(|id| comp_active.get(id)) {
+                        ctrl[4 + kind] = (v & 1) as f32; // odd ReplicatedActive == active
+                    }
+                }
+            }
+            let extra = CarExtra { rot: rb.rot, angvel: rb.angvel, ctrl };
+            snap_cars.insert(*pri, (rb.loc, rb.vel, car_boost.get(*car).copied(), extra));
         }
 
         // ---- decode_json body for this snapshot ----
@@ -445,10 +727,13 @@ pub fn decode(replay: &Replay, replay_id: &str) -> Decoded {
             let base = index * 6;
             ball[base..base + 3].copy_from_slice(&b.loc);
             ball[base + 3..base + 6].copy_from_slice(&b.vel);
+            ball_rot_arr[index * 4..index * 4 + 4].copy_from_slice(&b.rot);
+            ball_angvel_arr[index * 3..index * 3 + 3].copy_from_slice(&b.angvel);
         }
         ball_hit_arr[index] = ball_hit;
+        overtime_arr[index] = overtime;
         let mut entries = Vec::with_capacity(snap_cars.items.len());
-        for (pri, (loc, vel, boost)) in &snap_cars.items {
+        for (pri, (loc, vel, boost, extra)) in &snap_cars.items {
             let slot = match slots.get(*pri) {
                 Some(&s) => s,
                 None => {
@@ -467,7 +752,7 @@ pub fn decode(replay: &Replay, replay_id: &str) -> Decoded {
                     s
                 }
             };
-            entries.push((slot, *loc, *vel, *boost));
+            entries.push((slot, *loc, *vel, *boost, *extra));
         }
         per_frame.push(entries);
         for (attacker, victim) in &frame_demos {
@@ -483,12 +768,33 @@ pub fn decode(replay: &Replay, replay_id: &str) -> Decoded {
                 "victim_slot": slot_of(victim),
             }));
         }
+        for (pad, car) in &frame_pickups {
+            // Pad actors are level-placed, so their new-actor trajectory carries no location
+            // (checked on real replays: always null); the instigator car's last rigid body is
+            // the usable position, and the pad's object name is its stable per-map identity.
+            let slot = car_pri.get(*car).and_then(|pri| slots.get(*pri)).copied();
+            let car_loc: Value = match car_rb.get(*car) {
+                Some(rb) => json!([f32_json(rb.loc[0]), f32_json(rb.loc[1]), f32_json(rb.loc[2])]),
+                None => Value::Null,
+            };
+            pickups_out.push(json!({
+                "time": t,
+                "slot": slot,
+                "pad": Value::Null,
+                "big": Value::Null,
+                "pad_name": pad_name.get(*pad).cloned(),
+                "car_loc": car_loc,
+            }));
+        }
     }
 
     let p_len = n_slots;
     let mut cars = vec![f32::NAN; t_len * p_len * 7];
+    let mut cars_rot = vec![f32::NAN; t_len * p_len * 4];
+    let mut cars_angvel = vec![f32::NAN; t_len * p_len * 3];
+    let mut cars_ctrl = vec![f32::NAN; t_len * p_len * CTRL_WIDTH];
     for (i, entries) in per_frame.iter().enumerate() {
-        for (slot, loc, vel, boost) in entries {
+        for (slot, loc, vel, boost, extra) in entries {
             let base = (i * p_len + slot) * 7;
             cars[base..base + 3].copy_from_slice(loc);
             cars[base + 3..base + 6].copy_from_slice(vel);
@@ -496,6 +802,10 @@ pub fn decode(replay: &Replay, replay_id: &str) -> Decoded {
                 Some(b) => *b as f32,
                 None => f32::NAN,
             };
+            let cell = i * p_len + slot;
+            cars_rot[cell * 4..cell * 4 + 4].copy_from_slice(&extra.rot);
+            cars_angvel[cell * 3..cell * 3 + 3].copy_from_slice(&extra.angvel);
+            cars_ctrl[cell * CTRL_WIDTH..(cell + 1) * CTRL_WIDTH].copy_from_slice(&extra.ctrl);
         }
     }
 
@@ -554,13 +864,27 @@ pub fn decode(replay: &Replay, replay_id: &str) -> Decoded {
         "replay_version".into(),
         json!([replay.major_version, replay.minor_version, replay.net_version]),
     );
+    // Wide: the header PlayerStats array (decode.py drops it) as plain objects.
+    header.insert("player_stats".into(), player_stats_json(props));
 
     let players_json: Vec<Value> = player_rows
         .iter()
         .map(|r| {
+            let p = players.get(r.pri);
+            let body = p.and_then(|p| p.body).map(|(blue, orange)| {
+                if r.team == Some(1) { orange } else { blue }
+            });
+            let camera = p.and_then(|p| p.camera.as_ref()).map(Camera::json);
             json!({
                 "slot": r.slot, "pri": r.pri, "player_id": r.player_id, "name": r.name,
                 "platform": r.platform, "team": r.team,
+                "body": body,
+                "camera": camera,
+                "match_score": p.and_then(|p| p.match_score),
+                "match_goals": p.and_then(|p| p.match_goals),
+                "match_assists": p.and_then(|p| p.match_assists),
+                "match_saves": p.and_then(|p| p.match_saves),
+                "match_shots": p.and_then(|p| p.match_shots),
             })
         })
         .collect();
@@ -570,6 +894,7 @@ pub fn decode(replay: &Replay, replay_id: &str) -> Decoded {
         "goals": goals_out,
         "demos": demos_out,
         "header": Value::Object(header),
+        "pickups": pickups_out,
     });
 
     Decoded {
@@ -583,8 +908,58 @@ pub fn decode(replay: &Replay, replay_id: &str) -> Decoded {
         ball,
         ball_hit: ball_hit_arr,
         cars,
+        ball_rot: ball_rot_arr,
+        ball_angvel: ball_angvel_arr,
+        cars_rot,
+        cars_angvel,
+        cars_ctrl,
+        overtime: overtime_arr,
         meta,
     }
+}
+
+fn car_ctrl_mut(table: &mut ActorTable<Ctrl>, car: i32) -> &mut Ctrl {
+    if !table.contains(car) {
+        table.insert(car, Ctrl::new());
+    }
+    table.get_mut(car).expect("just inserted")
+}
+
+/// Header `PlayerStats` as plain objects. `Platform` is a `Byte {kind, value}` enum in the
+/// header; its `value` (e.g. `OnlinePlatform_Steam`) is what we keep. `OnlineID` is a QWord
+/// and is emitted as a decimal string so JSON readers never round it.
+fn player_stats_json(props: &[(String, HeaderProp)]) -> Value {
+    let Some(arr) = prop(props, "PlayerStats").and_then(HeaderProp::as_array) else {
+        return json!([]);
+    };
+    let rows: Vec<Value> = arr
+        .iter()
+        .map(|row| {
+            let platform = match prop(row, "Platform") {
+                Some(HeaderProp::Byte { value: Some(v), .. }) => json!(v),
+                other => prop_json(other),
+            };
+            let online_id = match prop(row, "OnlineID") {
+                Some(HeaderProp::QWord(q)) => json!(q.to_string()),
+                Some(HeaderProp::Int(i)) => json!(i.to_string()),
+                Some(HeaderProp::Str(s)) => json!(s),
+                _ => Value::Null,
+            };
+            json!({
+                "Name": prop_json(prop(row, "Name")),
+                "Platform": platform,
+                "Team": prop_json(prop(row, "Team")),
+                "Score": prop_json(prop(row, "Score")),
+                "Goals": prop_json(prop(row, "Goals")),
+                "Assists": prop_json(prop(row, "Assists")),
+                "Saves": prop_json(prop(row, "Saves")),
+                "Shots": prop_json(prop(row, "Shots")),
+                "bBot": prop_json(prop(row, "bBot")),
+                "OnlineID": online_id,
+            })
+        })
+        .collect();
+    Value::Array(rows)
 }
 
 fn attacker_from_car(car_pri: &OrderedMap<i32>, attacker_car: ActorId) -> Option<i32> {

@@ -8,6 +8,7 @@ from unittest import mock
 from urllib.error import HTTPError
 from urllib.parse import parse_qs, urlsplit
 
+from rlreplay import crawl as crawl_mod
 from rlreplay import meta
 from rlreplay.crawl import (KEY_ENV, Backoff, Crawler, CrawlError, MissingKeyError, Pacer, TIERS,
                             build_filters, metadata_line)
@@ -185,6 +186,47 @@ class CrawlTests(unittest.TestCase):
         self.assertEqual((self.out / "a.replay").read_bytes(), b"already here")
         self.assertEqual([json.loads(l)["id"] for l in (self.out / "metadata.json").read_text().splitlines()],
                          ["a", "b"])
+
+    def test_ledger_only_skips_replays_whose_file_is_gone(self):
+        self.out.mkdir(parents=True)
+        (self.out / "metadata.json").write_text(json.dumps({"id": "a"}) + "\n", encoding="utf-8")
+        site = FakeSite({None: ["a", "b"]})
+        self.crawler(site).run()  # default: no file, so "a" is fetched again
+        self.assertEqual(sum(u.endswith("/a/file") for u in site.calls), 1)
+        (self.out / "a.replay").unlink()
+        site2 = FakeSite({None: ["a", "b"]})
+        result = self.crawler(site2, ledger_only=True).run()
+        self.assertEqual(sum(u.endswith("/a/file") for u in site2.calls), 0)
+        self.assertFalse((self.out / "a.replay").exists())
+        self.assertEqual(result["stats"]["skipped_done"], 2)
+
+    def test_known_from_folders_and_files(self):
+        other = self.out.parent / "other"
+        other.mkdir(parents=True)
+        (other / "metadata.json").write_text(json.dumps({"id": "a"}) + "\n", encoding="utf-8")
+        self.assertEqual(crawl_mod.known_ids_from([other, other / "metadata.json", other / "missing"]), {"a"})
+        site = FakeSite({None: ["a", "b"]})
+        self.crawler(site, known_ids=crawl_mod.known_ids_from([other])).run()
+        self.assertEqual(sum(u.endswith("/replays/a") or u.endswith("/a/file") for u in site.calls), 0)
+        self.assertTrue((self.out / "b.replay").exists())
+
+    def test_should_stop_keeps_cursor_on_the_page(self):
+        calls = []
+        site = FakeSite({None: ["a", "b", "c"]})
+        crawler = self.crawler(site, should_stop=lambda: len(calls) > 0)
+        original = crawler.fetch_one
+
+        def fetch(replay_id):
+            calls.append(replay_id)
+            return original(replay_id)
+        crawler.fetch_one = fetch
+        result = crawler.run()
+        self.assertEqual(result["stats"]["saved"], 1)
+        self.assertFalse(result["listing_complete"])
+        self.assertIsNotNone(json.loads((self.out / "crawl_state.json").read_text())["cursor"])
+        site2 = FakeSite({None: ["a", "b", "c"]})
+        self.crawler(site2).run()
+        self.assertEqual(sorted(p.stem for p in self.out.glob("*.replay")), ["a", "b", "c"])
 
     def test_429_honours_retry_after_and_recovers(self):
         site = FakeSite({None: ["a", "b"]}, fail_file_429_once=("a",))

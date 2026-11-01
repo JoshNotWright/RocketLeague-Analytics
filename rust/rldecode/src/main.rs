@@ -2,8 +2,11 @@
 //! `rldecode --batch <out_dir>`  (replay paths on stdin, one per line, optional `\t<id>`)
 //!
 //! Decodes Rocket League `.replay` files with boxcars and writes `<out_dir>/<id>.npz` plus
-//! `<out_dir>/<id>.meta.json` in exactly the layout `rlreplay.decode.save` produces, so
-//! `rlreplay.decode.load` reads them unchanged. Batch mode prints one line per replay
+//! `<out_dir>/<id>.meta.json`. The first eight arrays and the existing meta keys are exactly
+//! what `rlreplay.decode.save` produces (bit parity is tested); after them come the "wide"
+//! arrays (`ball_rot`, `ball_angvel`, `cars_rot`, `cars_angvel`, `cars_ctrl`, `overtime`) and
+//! extra meta keys (`pickups`, per-player `body`/`camera`/`match_*`, `header.player_stats`)
+//! that only this decoder writes. Batch mode prints one line per replay
 //! (`ok\t<id>` or `failed\t<id>\t<message>`) and exits 0 even if some replays failed; it
 //! exists because process start-up on Windows costs more than decoding a replay.
 
@@ -123,6 +126,19 @@ fn run(replay_path: &Path, out_dir: &Path, replay_id: &str) -> Result<(), String
         w.add("ball", &dec.ball, &[t, 6]).map_err(io)?;
         w.add("ball_hit", &dec.ball_hit, &[t]).map_err(io)?;
         w.add("cars", &dec.cars, &[t, p, 7]).map_err(io)?;
+        // Wide layout: everything a model might want beyond the narrow set, written after it
+        // so readers of the narrow set are unaffected (raw replays are not kept long term).
+        // Wide layout in compact dtypes: car facing and angular velocity and ball spin as
+        // float16 (3 significant digits are plenty), the eight control channels as int16
+        // (throttle and steer are 0..255 bytes, the rest 0/1 flags; -1 until first replicated).
+        // Ball orientation is decoded but not written: a sphere's orientation carries nothing.
+        let half = |v: &[f32]| v.iter().map(|&x| npz::F16::from_f32(x)).collect::<Vec<_>>();
+        let ctrl: Vec<i16> = dec.cars_ctrl.iter().map(|&x| if x.is_nan() { -1 } else { x as i16 }).collect();
+        w.add("ball_angvel", &half(&dec.ball_angvel), &[t, 3]).map_err(io)?;
+        w.add("cars_rot", &half(&dec.cars_rot), &[t, p, 4]).map_err(io)?;
+        w.add("cars_angvel", &half(&dec.cars_angvel), &[t, p, 3]).map_err(io)?;
+        w.add("cars_ctrl", &ctrl, &[t, p, decode::CTRL_WIDTH]).map_err(io)?;
+        w.add("overtime", &dec.overtime, &[t]).map_err(io)?;
         w.add("meta", &meta_bytes, &[meta_bytes.len()]).map_err(io)?;
         let mut inner = w.finish().map_err(io)?;
         inner.flush().map_err(io)?;

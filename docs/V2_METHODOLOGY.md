@@ -210,6 +210,22 @@ Rust batch mode 66 ms, 14x. Inside the binary a replay takes about 12 ms to pars
 walk and 30 ms to deflate (level 6, the same size as numpy's output; `RLDECODE_ZLEVEL=1`
 halves the write time for 23% larger files). `RLDECODE_TIMING=1` prints that breakdown.
 
+### The wide decode
+
+Raw replays are not kept once the cloud crawler pushes a batch, so the decoded file is the
+long-term copy and the Rust decoder writes a superset of what the models use today, after the
+eight narrow arrays: `cars_rot[T, P, 4]` and `cars_angvel[T, P, 3]` (float16), `ball_angvel[T, 3]`
+(float16), `cars_ctrl[T, P, 8]` (int16: throttle, steer, handbrake, on_ground, boost_active,
+jump_active, double_jump_active, dodge_active; -1 until first replicated), `overtime[T]`, plus
+boost pickups, car body, camera settings, per-player match stats and the header's PlayerStats
+in the meta JSON. Facing and the input flags are what the decision model lacks (it infers both
+from velocity and height); the inputs are the player's actual actions, which a sequence model
+trains on. Ball orientation is the one decoded field not written. Compact dtypes keep the wide
+file at about 1.5x the narrow one (814 KB against 542 KB on 50 replays) at 59 ms per replay,
+and the narrow arrays stay bit-identical (240 replays checked). The Python fallback still
+writes the narrow set; `decode.load` returns whichever arrays a file has. The cloud pipeline
+itself is in [CLOUD_CRAWLER.md](CLOUD_CRAWLER.md).
+
 ### Rank bands and the band crawl
 
 `scripts/crawl_bands.ps1` crawls Diamond, Champion and GC ranked doubles in monthly windows

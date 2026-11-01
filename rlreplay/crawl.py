@@ -253,7 +253,8 @@ class Crawler:
     def __init__(self, out_dir, filters: dict, *, tier: str = DEFAULT_TIER, max_replays: int | None = None,
                  key: str | None = None, transport=None, sleep=time.sleep, clock=time.monotonic,
                  timeout: float = 120.0, max_retries: int = 6, max_429: int = 24, log=_log,
-                 progress_every: int = 25, workers: int = 1, known_ids=None, quiet: bool = False):
+                 progress_every: int = 25, workers: int = 1, known_ids=None, quiet: bool = False,
+                 ledger_only: bool = False, should_stop=None):
         if tier not in TIERS:
             raise ValueError(f"tier must be one of {sorted(TIERS)}")
         self.out = Path(out_dir)
@@ -268,6 +269,12 @@ class Crawler:
         self.workers = max(1, int(workers))
         self.known_ids = set(known_ids or ())
         self.quiet = quiet
+        # ledger_only: a metadata line alone marks a replay done, so folders whose raw files are
+        # deleted after they are decoded and pushed (the cloud crawler) never refetch them.
+        self.ledger_only = ledger_only
+        # should_stop(): polled between replays and pages; True ends the run with the cursor kept
+        # on the current page, exactly like running out of max_replays (used for SIGTERM).
+        self.should_stop = should_stop
         self.lock = threading.RLock()  # guards state, done, the metadata file and stats
         self.inflight = 0  # fetches started but not yet counted, so the pool cannot overshoot max_replays
         if transport is None:
@@ -306,11 +313,15 @@ class Crawler:
                 state.update({k: v for k, v in saved.items() if k in state})
                 state["filters"] = self.filters
         self.done = set(state["done"])
-        # Idempotence against the files themselves: a replay with a metadata line and a file is done.
+        # Idempotence against the files themselves: a replay with a metadata line and a file is done
+        # (with ledger_only, the metadata line is enough).
         in_meta = self._metadata_ids()
-        for path in self.out.glob("*.replay"):
-            if path.stat().st_size > 0 and path.stem in in_meta:
-                self.done.add(path.stem)
+        if self.ledger_only:
+            self.done |= in_meta
+        else:
+            for path in self.out.glob("*.replay"):
+                if path.stat().st_size > 0 and path.stem in in_meta:
+                    self.done.add(path.stem)
         self.meta_ids = in_meta
         self.done |= self.known_ids  # replays another folder already holds: listed, skipped, never fetched
         return state
@@ -408,6 +419,8 @@ class Crawler:
         return list_url(self.active_filters)
 
     def budget_left(self) -> bool:
+        if self.should_stop is not None and self.should_stop():
+            return False
         return self.max_replays is None or self.stats["saved"] + self.inflight < self.max_replays
 
     def fetch_one(self, replay_id: str) -> str:
@@ -463,10 +476,14 @@ class Crawler:
             outcome = "failed"
             with self.lock:
                 self.state["failed"][replay_id] = str(exc)
-        finally:
+        except BaseException:
             with self.lock:
                 self.inflight -= 1
+            raise
         with self.lock:
+            # the slot is released and the outcome counted under one lock, so budget_left()
+            # never sees a replay that is neither in flight nor saved (the pool overshot by one)
+            self.inflight -= 1
             self.stats[outcome] += 1
             self.save_state()
             if outcome == "saved" and self.stats["saved"] % self.progress_every == 0:
@@ -568,6 +585,17 @@ def metadata_ids(path) -> set[str]:
     return ids
 
 
+def known_ids_from(paths) -> set[str]:
+    """Union of metadata ids over metadata files and crawl folders (a folder means its metadata.json)."""
+    ids = set()
+    for item in paths:
+        path = Path(item)
+        if path.is_dir():
+            path = path / METADATA_FILE
+        ids |= metadata_ids(path)
+    return ids
+
+
 def player_appearances(meta_paths, *, min_points: int | None = None, max_points: int | None = None) -> dict:
     """``{player_id: {"games": n, "in_band": m, "name": str}}`` over every metadata file given.
 
@@ -666,6 +694,12 @@ def add_arguments(parser) -> None:
     parser.add_argument("--timeout", type=float, default=120.0)
     parser.add_argument("--workers", type=int, default=1,
                         help="replays fetched concurrently (the rate limits still apply); 4 suits a GC key")
+    parser.add_argument("--ledger-only", action="store_true",
+                        help="a metadata line alone counts as done (for folders whose .replay files are "
+                             "deleted once decoded and pushed); default needs the file too")
+    parser.add_argument("--known-from", action="append", default=None, metavar="PATH",
+                        help="metadata.json file(s) or crawl folder(s) whose replays are skipped, never fetched; "
+                             "repeatable (the player stage does this for its band folders)")
 
 
 def add_player_arguments(parser) -> None:
@@ -718,9 +752,11 @@ def main_from_args(args) -> int:
                             season=args.season, after=args.after, before=args.before, count=args.count,
                             sort_by=args.sort_by, sort_dir=args.sort_dir, extra=extra)
     out = Path(args.out) / args.name
+    known = known_ids_from(getattr(args, "known_from", None) or ())
     try:
         crawler = Crawler(out, filters, tier=args.tier, max_replays=args.max_replays, timeout=args.timeout,
-                          workers=getattr(args, "workers", 1))
+                          workers=getattr(args, "workers", 1), known_ids=known,
+                          ledger_only=getattr(args, "ledger_only", False))
     except MissingKeyError as exc:
         print(f"crawl aborted: {exc}", file=sys.stderr, flush=True)
         print(f"summary: saved=0 out={out} (nothing fetched)", file=sys.stderr, flush=True)

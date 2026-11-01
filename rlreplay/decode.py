@@ -1,6 +1,6 @@
 """Decode a replay once into compact arrays, so every downstream product is vectorized.
 
-Per replay (``<id>.npz``, ~0.5 MB compressed):
+Narrow layout, per replay (``<id>.npz``, ~0.5 MB compressed), written by both decoders:
 
     times[T], delta[T], active[T] (the dt interval belonged to Active play), round_start[T],
     seconds_remaining[T], ball[T, 6] (loc xyz, vel xyz; NaN when absent), ball_hit[T],
@@ -9,8 +9,28 @@ Per replay (``<id>.npz``, ~0.5 MB compressed):
     goals: JSON list of {time, team, scorer}, demos: JSON list of {time, attacker_slot, victim_slot},
     header: JSON (team scores, team size, map, date, build version, num frames).
 
-Walking the network stream is still one Python pass (``stream.iter_snapshots``), but it
-happens once per replay instead of once per product, and label changes no longer need it.
+Wide layout, appended after the narrow arrays by the Rust decoder only (tools/rldecode.exe;
+the Python fallback below writes the narrow set and nothing more). Raw replays are not kept
+long term, so the wide set is meant to be a superset of what any model will need:
+
+    cars_rot[T, P, 4] float16 (unit quaternion x y z w: which way each car faces),
+    cars_angvel[T, P, 3] float16 (rad/s), ball_angvel[T, 3] float16 (spin; 0 when the rigid
+    body carries none, like velocity), cars_ctrl[T, P, 8] int16 (throttle, steer as the raw
+    0..255 byte, handbrake, on_ground, boost_active, jump_active, double_jump_active,
+    dodge_active as 0/1; -1 until first replicated, then carried forward like boost),
+    overtime[T] bool. The inputs are kept because they are the player's actual actions, which
+    a sequence model trains on; ball orientation is the one decoded field not written. The
+    compact dtypes keep the wide file well under twice the narrow one.
+    Meta additions: pickups (list of {time, slot, pad, big, pad_name, car_loc}; pad and big
+    are null because pad actors are level-placed and carry no spawn location, pad_name is
+    the stable per-map pad id such as VehiclePickup_Boost_TA_27 and car_loc the collecting
+    car's position), per player body, camera {fov, height, angle, distance, stiffness,
+    swivel, transition}, match_score/goals/assists/saves/shots (null when never seen), and
+    header.player_stats (the header PlayerStats rows as plain objects).
+
+``load`` returns every array present, so the wide keys are simply absent for a narrow file.
+Walking the network stream is still one Python pass (``stream.iter_snapshots``) on the
+fallback path, but it happens once per replay instead of once per product.
 """
 from __future__ import annotations
 
@@ -113,10 +133,16 @@ def save(decoded: dict, path) -> None:
     tmp.replace(path)
 
 
+NARROW_ARRAYS = ("times", "delta", "active", "round_start", "seconds_remaining", "ball", "ball_hit", "cars")
+WIDE_ARRAYS = ("ball_angvel", "cars_rot", "cars_angvel", "cars_ctrl", "overtime")
+
+
 def load(path) -> dict:
     with np.load(path) as z:
         meta = json.loads(bytes(z["meta"]).decode())
-        out = {k: z[k] for k in ("times", "delta", "active", "round_start", "seconds_remaining", "ball", "ball_hit", "cars")}
+        out = {k: z[k] for k in NARROW_ARRAYS}
+        present = set(z.files)
+        out.update({k: z[k] for k in WIDE_ARRAYS if k in present})
     out.update(meta)
     return out
 

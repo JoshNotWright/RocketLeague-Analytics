@@ -253,7 +253,7 @@ class Crawler:
     def __init__(self, out_dir, filters: dict, *, tier: str = DEFAULT_TIER, max_replays: int | None = None,
                  key: str | None = None, transport=None, sleep=time.sleep, clock=time.monotonic,
                  timeout: float = 120.0, max_retries: int = 6, max_429: int = 24, log=_log,
-                 progress_every: int = 25, workers: int = 1):
+                 progress_every: int = 25, workers: int = 1, known_ids=None, quiet: bool = False):
         if tier not in TIERS:
             raise ValueError(f"tier must be one of {sorted(TIERS)}")
         self.out = Path(out_dir)
@@ -266,6 +266,8 @@ class Crawler:
         self.log = log
         self.progress_every = progress_every
         self.workers = max(1, int(workers))
+        self.known_ids = set(known_ids or ())
+        self.quiet = quiet
         self.lock = threading.RLock()  # guards state, done, the metadata file and stats
         self.inflight = 0  # fetches started but not yet counted, so the pool cannot overshoot max_replays
         if transport is None:
@@ -297,7 +299,8 @@ class Crawler:
                 saved = {}
             if isinstance(saved, dict):
                 if saved.get("filters") not in (None, self.filters):
-                    self.log("warning: filters differ from the saved state; the cursor is discarded")
+                    if not self.quiet:
+                        self.log("warning: filters differ from the saved state; the cursor is discarded")
                     saved.pop("cursor", None)
                     saved["listing_complete"] = False
                 state.update({k: v for k, v in saved.items() if k in state})
@@ -309,6 +312,7 @@ class Crawler:
             if path.stat().st_size > 0 and path.stem in in_meta:
                 self.done.add(path.stem)
         self.meta_ids = in_meta
+        self.done |= self.known_ids  # replays another folder already holds: listed, skipped, never fetched
         return state
 
     def _metadata_ids(self) -> set[str]:
@@ -540,6 +544,107 @@ def crawl(out_dir, filters: dict, **kwargs) -> dict:
     return Crawler(out_dir, filters, **kwargs).run()
 
 
+# ---- player-focused second stage ---------------------------------------------------------
+#
+# A replay-first crawl (newest N per month) gives a broad sample of a band but almost no repeat
+# players, and references need players seen 30+ times. This stage picks the players who appear
+# most in a band corpus (frequent appearance in uploads is a fair proxy for an active player at
+# that rank), confirms their own tagged rank is inside the band, and pulls their games with the
+# player-id filter until each has ``per_player`` replays across the corpus and this folder.
+
+def metadata_ids(path) -> set[str]:
+    ids = set()
+    path = Path(path)
+    if not path.exists():
+        return ids
+    with open(path, "r", encoding="utf-8") as handle:
+        for line in handle:
+            line = line.strip()
+            if line:
+                try:
+                    ids.add(json.loads(line)["id"])
+                except (ValueError, KeyError, TypeError):
+                    continue
+    return ids
+
+
+def player_appearances(meta_paths, *, min_points: int | None = None, max_points: int | None = None) -> dict:
+    """``{player_id: {"games": n, "in_band": m, "name": str}}`` over every metadata file given.
+
+    ``in_band`` counts games where the player's own tagged rank (``meta.rank_points``) lies in
+    ``[min_points, max_points]``; without bounds every tagged game counts.
+    """
+    from .meta import iter_records, rank_points
+    seen = {}
+    counts: dict = {}
+    for path in meta_paths:
+        path = Path(path)
+        if not path.exists():
+            continue
+        for record in iter_records(path):
+            rid = record.get("id")
+            if rid in seen:
+                continue
+            seen[rid] = True
+            data = record.get("data") or {}
+            for color in ("blue", "orange"):
+                for player in ((data.get(color) or {}).get("players") or []):
+                    pid = player.get("id") or {}
+                    if not pid.get("platform") or not pid.get("id"):
+                        continue
+                    key = f"{str(pid['platform']).lower()}:{pid['id']}"
+                    entry = counts.setdefault(key, {"games": 0, "in_band": 0, "name": player.get("name")})
+                    entry["games"] += 1
+                    points = rank_points(player.get("rank"))
+                    if points is not None and (min_points is None or points >= min_points) \
+                            and (max_points is None or points <= max_points):
+                        entry["in_band"] += 1
+    return counts
+
+
+def select_players(appearances: dict, *, n: int, per_player: int, min_in_band_share: float = 0.6,
+                   min_games: int = 2) -> list[tuple[str, int]]:
+    """Players to crawl, most seen first: ``[(player_id, replays still wanted)]``.
+
+    Keeps players with at least ``min_games`` appearances, most of them tagged inside the band,
+    and who still need games to reach ``per_player``.
+    """
+    ranked = sorted(appearances.items(), key=lambda kv: (-kv[1]["games"], kv[0]))
+    chosen = []
+    for pid, entry in ranked:
+        if entry["games"] < min_games:
+            break
+        if entry["games"] and entry["in_band"] / entry["games"] < min_in_band_share:
+            continue
+        wanted = per_player - entry["games"]
+        if wanted <= 0:
+            continue
+        chosen.append((pid, wanted))
+        if len(chosen) >= n:
+            break
+    return chosen
+
+
+def crawl_players(out_dir, players, base_filters: dict, *, known_ids=None, log=_log, **crawler_kwargs) -> dict:
+    """Run one player-id crawl per ``(player_id, wanted)`` into ``out_dir``; returns totals."""
+    totals = {"players": 0, "saved": 0, "failed": 0, "interrupted": False}
+    known = set(known_ids or ())
+    for player_id, wanted in players:
+        filters = dict(base_filters)
+        filters["player-id"] = player_id
+        crawler = Crawler(out_dir, filters, max_replays=wanted, known_ids=known, quiet=True, log=log, **crawler_kwargs)
+        result = crawler.run()
+        totals["players"] += 1
+        totals["saved"] += result["stats"]["saved"]
+        totals["failed"] += result["stats"]["failed"]
+        known |= crawler.done
+        log(f"player {player_id}: wanted {wanted}, saved {result['stats']['saved']} (stage total {totals['saved']})")
+        if result["interrupted"]:
+            totals["interrupted"] = True
+            break
+    return totals
+
+
 def add_arguments(parser) -> None:
     parser.add_argument("--out", required=True, help="dataset root; files go under <out>/<name>/")
     parser.add_argument("--name", default="2v2_diamond_champion", help="subfolder name, like the Kaggle '2v2'")
@@ -561,6 +666,50 @@ def add_arguments(parser) -> None:
     parser.add_argument("--timeout", type=float, default=120.0)
     parser.add_argument("--workers", type=int, default=1,
                         help="replays fetched concurrently (the rate limits still apply); 4 suits a GC key")
+
+
+def add_player_arguments(parser) -> None:
+    parser.add_argument("--band-dir", required=True, action="append",
+                        help="band folder(s) from the window crawl; players are chosen from their metadata")
+    parser.add_argument("--out", required=True, help="folder for this stage's replays (kept apart from the band folder)")
+    parser.add_argument("--playlist", default="ranked-doubles")
+    parser.add_argument("--min-rank", default="diamond-1"); parser.add_argument("--max-rank", default="diamond-3")
+    parser.add_argument("--min-points", type=int, default=None, help="rank points lower bound for a player's own tag")
+    parser.add_argument("--max-points", type=int, default=None, help="rank points upper bound for a player's own tag")
+    parser.add_argument("--after", default=None); parser.add_argument("--before", default=None)
+    parser.add_argument("--players", type=int, default=120); parser.add_argument("--per-player", type=int, default=40)
+    parser.add_argument("--min-games", type=int, default=2, help="appearances in the band corpus needed to be chosen")
+    parser.add_argument("--tier", default=DEFAULT_TIER, choices=sorted(TIERS))
+    parser.add_argument("--workers", type=int, default=1); parser.add_argument("--timeout", type=float, default=120.0)
+    parser.add_argument("--dry-run", action="store_true", help="list the chosen players and stop")
+
+
+def main_players_from_args(args) -> int:
+    metas = [Path(d) / METADATA_FILE for d in args.band_dir]
+    out = Path(args.out)
+    appearances = player_appearances(metas + [out / METADATA_FILE], min_points=args.min_points, max_points=args.max_points)
+    players = select_players(appearances, n=args.players, per_player=args.per_player, min_games=args.min_games)
+    print(f"{len(appearances)} players seen; {len(players)} chosen, "
+          f"{sum(w for _, w in players)} replays wanted", file=sys.stderr, flush=True)
+    for pid, wanted in players[:10]:
+        print(f"  {pid} {appearances[pid]['name']!r}: {appearances[pid]['games']} seen, {wanted} wanted", file=sys.stderr)
+    if args.dry_run or not players:
+        return 0
+    known = set()
+    for meta in metas:
+        known |= metadata_ids(meta)
+    filters = build_filters(playlist=args.playlist, min_rank=args.min_rank or None, max_rank=args.max_rank or None,
+                            after=args.after, before=args.before, sort_dir="desc")
+    try:
+        totals = crawl_players(out, players, filters, known_ids=known, tier=args.tier, workers=args.workers,
+                               timeout=args.timeout)
+    except MissingKeyError as exc:
+        print(f"crawl aborted: {exc}", file=sys.stderr, flush=True)
+        return 2
+    print(f"players={totals['players']} saved={totals['saved']} failed={totals['failed']} out={out}", flush=True)
+    if totals["interrupted"]:
+        return 130
+    return 0 if not totals["failed"] else 1
 
 
 def main_from_args(args) -> int:

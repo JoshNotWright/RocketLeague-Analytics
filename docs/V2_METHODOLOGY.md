@@ -184,6 +184,19 @@ or comma-separate), so one fit covers every band, with each match's mean rank as
 games whose mean rank falls in that band; `score --reference rlreplay/reference` then compares
 each player with the band they actually played in.
 
+### Second stage: players, not replays
+
+A replay-first crawl yields almost no repeat players (the first 400 Diamond replays held 1,150
+distinct players, none above 13 games), and references need players seen 30+ times, which is
+how the Kaggle subset was built (120 players with 30+ games each). `rlreplay crawl-players`
+reads a band folder's metadata, ranks players by appearances, keeps those whose own tagged rank
+sits inside the band, and pulls each one's games with ballchasing's player-id filter until they
+have `--per-player` replays (default 40 for 120 players), into a separate folder such as
+`data/raw/2v2_diamond_players`. Replays the band folder already holds are listed but never
+fetched again. `scripts/crawl_band_players.ps1` runs it for the three bands once no window
+crawl is running, so the two stages never share the API quota; `--dry-run` shows the chosen
+players first.
+
 ### Player cards
 
 `python -m rlreplay card --report reports/<scored folder> --player <name>` renders a percentile

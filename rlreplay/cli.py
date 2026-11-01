@@ -318,6 +318,11 @@ def cmd_card(args):
     print(f"{result['player']}: {result['svg']} and {result['html']}")
 
 
+def cmd_crawl_players(args):
+    from .crawl import main_players_from_args
+    return main_players_from_args(args)
+
+
 def cmd_crawl(args):
     from .crawl import main_from_args
     return main_from_args(args)
@@ -440,6 +445,11 @@ def main(argv=None):
     p.add_argument("--player", required=True, help="player name or id"); p.add_argument("--out", default=None)
     p.add_argument("--reference", default=None, help="reference directory (default rlreplay/reference)")
     p.set_defaults(func=cmd_card)
+
+    p = sub.add_parser("crawl-players", help="second stage: pull 40 games each for the players seen most in a band corpus")
+    from .crawl import add_player_arguments as _player_arguments
+    _player_arguments(p)
+    p.set_defaults(func=cmd_crawl_players)
 
     p = sub.add_parser("crawl", help="crawl ballchasing.com replays at chosen ranks (needs BALLCHASING_API_KEY)")
     from .crawl import add_arguments as _crawl_arguments

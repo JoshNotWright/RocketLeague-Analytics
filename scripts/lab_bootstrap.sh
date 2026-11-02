@@ -73,6 +73,9 @@ if [[ ! -f "$ENV_FILE" ]]; then
     # lab_setup.sh copies the full template later; until then a stub holds what git needs.
     install -m 640 /dev/null "$ENV_FILE"
 fi
+get_env() {  # get_env KEY : the value, without an inline "  # comment" or surrounding whitespace
+    sed -n "s/^${1}=//p" "$ENV_FILE" | tail -n1 | sed -e 's/[[:space:]]#.*$//' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//'
+}
 set_env() {  # set_env KEY VALUE : replace or append KEY=VALUE in the env file, never echoing the value
     local key="$1" val="$2" tmp
     tmp="$(mktemp)"
@@ -89,7 +92,7 @@ set_env() {  # set_env KEY VALUE : replace or append KEY=VALUE in the env file, 
 if [[ "$REPO_URL" == https://github.com/* ]]; then
     git config --system credential.https://github.com.useHttpPath false
     git config --system credential.https://github.com.helper \
-        '!f(){ t=$(sed -n "s/^GITHUB_TOKEN=//p" /etc/rlreplay/lab.env | tail -n1); [ -n "$t" ] || exit 0; echo username=x-access-token; echo "password=$t"; }; f'
+        '!f(){ t=$(sed -n "s/^GITHUB_TOKEN=//p" /etc/rlreplay/lab.env | tail -n1 | sed -e "s/[[:space:]]#.*$//" -e "s/[[:space:]]*$//"); [ -n "$t" ] || exit 0; echo username=x-access-token; echo "password=$t"; }; f'
 fi
 
 # ---------------------------------------------------------------- repository
@@ -132,15 +135,16 @@ set_env LAB_REPO "$DEST"
 [[ -n "$TS_IP" ]] && { set_env LAB_TS_HOST "$TS_IP"; set_env LAB_UI_BIND "$TS_IP"; }
 
 # ---------------------------------------------------------------- hetzner ssh key
-HC="$(sed -n 's/^HCLOUD_TOKEN=//p' "$ENV_FILE" | tail -n1)"
-KEY_NAME="$(sed -n 's/^HCLOUD_SSH_KEY=//p' "$ENV_FILE" | tail -n1)"; KEY_NAME="${KEY_NAME:-rl-lab}"
+HC="$(get_env HCLOUD_TOKEN)"
+KEY_NAME="$(get_env HCLOUD_SSH_KEY)"; KEY_NAME="${KEY_NAME:-rl-lab}"
 if [[ -n "$HC" ]]; then
     say "hetzner: ssh key '$KEY_NAME'"
     if HCLOUD_TOKEN="$HC" hcloud ssh-key describe "$KEY_NAME" >/dev/null 2>&1; then
         echo "   already registered"
     else
         HCLOUD_TOKEN="$HC" hcloud ssh-key create --name "$KEY_NAME" \
-            --public-key-from-file /root/.ssh/id_ed25519.pub >/dev/null && echo "   registered"
+            --public-key-from-file /root/.ssh/id_ed25519.pub >/dev/null && echo "   registered" \
+            || warn "could not register the key; if hcloud said unauthorized, HCLOUD_TOKEN in $ENV_FILE is wrong or not Read & Write"
     fi
 fi
 
@@ -161,12 +165,12 @@ systemctl enable -q --now rlreplay-lab-ui
 systemctl restart rlreplay-lab-ui
 sleep 1
 systemctl is-active --quiet rlreplay-lab-ui || { journalctl -u rlreplay-lab-ui -n 20 --no-pager; die "UI did not start"; }
-PORT="$(sed -n 's/^LAB_UI_PORT=//p' "$ENV_FILE" | tail -n1)"; PORT="${PORT:-8731}"
+PORT="$(get_env LAB_UI_PORT)"; PORT="${PORT:-8731}"
 
 # ---------------------------------------------------------------- what is left
 missing=()
 for k in HCLOUD_TOKEN BALLCHASING_API_KEY TS_AUTHKEY; do
-    grep -q "^${k}=.\+" "$ENV_FILE" || missing+=("$k")
+    [[ -n "$(get_env "$k")" ]] || missing+=("$k")
 done
 cat <<EOF
 

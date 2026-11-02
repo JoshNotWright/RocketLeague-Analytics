@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Build the crawler snapshot once (rebuild when the pipeline changes): a throwaway server gets
 # this repository, a venv, the Rust decoder, rclone and tailscale, then is snapshotted and deleted.
-# No secret touches the image. Runs on the lab. Usage: scripts/crawler_image.sh [server-type]
+# No secret touches the image. Older snapshots with the label are deleted once the new one exists
+# (KEEP_IMAGES=2 keeps one rollback). Runs on the lab. Usage: scripts/crawler_image.sh [server-type]
 # shellcheck source=crawler_lib.sh
 . "$(dirname "$0")/crawler_lib.sh"
 need_cmd hcloud rsync ssh
@@ -73,4 +74,15 @@ log "snapshotting"
 hcloud server poweroff "$BUILD_NAME" >/dev/null
 hcloud server create-image --type snapshot --description "rl-crawler $(date -u +%Y-%m-%dT%H:%M)" \
     --label "${IMAGE_LABEL}" "$BUILD_NAME" >/dev/null
-log "image ready: $(latest_image_id)"
+NEW_IMAGE="$(latest_image_id)"
+log "image ready: $NEW_IMAGE"
+
+# Older snapshots with our label are only a bill: crawler_up.sh always takes the newest.
+# KEEP_IMAGES=2 would keep one rollback; the default keeps only the new one.
+: "${KEEP_IMAGES:=1}"
+OLD_IMAGES="$(hcloud image list --type snapshot --selector "$IMAGE_LABEL" -o noheader -o columns=id,created     | sort -k2 -r | tail -n +"$((KEEP_IMAGES + 1))" | awk '{print $1}')"
+for id in $OLD_IMAGES; do
+    [[ "$id" != "$NEW_IMAGE" ]] || continue
+    log "deleting older snapshot $id"
+    hcloud image delete "$id" >/dev/null || log "could not delete snapshot $id (delete it in the console)"
+done

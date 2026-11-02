@@ -55,6 +55,31 @@ site's author about the project.
 Any always-on Linux machine with a mirrored, checksummed filesystem. Ubuntu Server 24.04 is
 what the scripts assume (paths like `/usr/lib/openssh/sftp-server`); Debian is identical.
 
+### 1.0 The short way: one command
+
+If Tailscale is already joined on the lab, `scripts/lab_bootstrap.sh` does 1.2 to 1.7 in one go.
+The repository is private, so it needs a GitHub token to fetch itself and to clone: GitHub →
+Settings → Developer settings → Fine-grained tokens → this repository only, **Contents:
+read-only**. Then, on the lab:
+
+```bash
+read -rsp 'GitHub token: ' GH_TOKEN && echo && curl -fsSL -H "Authorization: Bearer $GH_TOKEN" https://raw.githubusercontent.com/JoshNotWright/RocketLeague-Analytics/v2-replay-features/scripts/lab_bootstrap.sh | sudo GH_TOKEN="$GH_TOKEN" bash
+```
+
+The `read` keeps the token out of your shell history. The script installs the packages and
+the hcloud CLI, clones the branch to `/opt/rlreplay`, runs `lab_setup.sh`, stores the token
+in `/etc/rlreplay/lab.env` as `GITHUB_TOKEN` (git reads it from there, so `git pull` keeps
+working), starts the UI, and prints what is still empty in the env file. Options go in the
+environment before `bash`: `RL_ROOT=/pool/rl` for a different data tree, and the three
+secrets `HCLOUD_TOKEN=… BALLCHASING_API_KEY=… TS_AUTHKEY=…` if you want them written now
+(then it also registers the lab's SSH key with Hetzner). Otherwise fill them with
+`sudo nano /etc/rlreplay/lab.env`, restart `rlreplay-lab-ui`, and re-run the same command
+once so the Hetzner key gets registered.
+
+Re-running the command later updates the checkout to the branch tip and restarts the UI.
+It does not touch sshd unless you pass `RL_LOCK_SSHD=1` (do that from a Tailscale session,
+not a LAN one, or it cuts you off). Sections 1.1 to 1.7 below are what it does, by hand.
+
 ### 1.1 Storage
 A ZFS mirror is the recommended tree. Example with two disks:
 ```bash

@@ -31,7 +31,12 @@ bootstrap_ssh "$IP" 'bash -s' <<'REMOTE'
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -q
-apt-get install -y -q python3 python3-venv python3-pip rclone curl build-essential pkg-config rsync
+apt-get install -y -q python3 python3-venv python3-pip curl unzip build-essential pkg-config rsync
+# rclone from rclone.org, not apt: Ubuntu's 1.60 writes uploads in place, so the lab can read a
+# half-written ledger (and a push that dies leaves a truncated one). 1.63+ uploads to a temporary
+# name and renames.
+curl -fsSL https://rclone.org/install.sh | bash
+rclone version | head -n1
 curl -fsSL https://tailscale.com/install.sh | sh
 curl -fsSL https://sh.rustup.rs | sh -s -- -y --profile minimal
 mkdir -p /opt/rlreplay /var/lib/rlreplay /etc/rlreplay

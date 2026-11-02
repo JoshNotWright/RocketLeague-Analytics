@@ -47,10 +47,10 @@ cleanup_on_failure() {
     local rc=$?
     [[ $rc -ne 0 && $STARTED -eq 0 ]] || return 0
     if [[ "${KEEP_ON_FAILURE:-0}" == 1 ]]; then
-        log "bring-up failed (exit $rc); $CRAWLER_NAME kept for inspection (public port may still be open from $MYIP)"
+        log "bring-up failed, exit $rc; $CRAWLER_NAME kept for inspection, port 22 still open from $MYIP"
         return 0
     fi
-    log "bring-up failed (exit $rc); deleting $CRAWLER_NAME and its boot firewall"
+    log "bring-up failed, exit $rc; deleting $CRAWLER_NAME and its boot firewall"
     box_tailscale_logout
     [[ -n "${IP:-}" ]] && bootstrap_ssh "$IP" 'tailscale logout' >/dev/null 2>&1 || true
     hcloud server delete "$CRAWLER_NAME" >/dev/null 2>&1 || true
@@ -59,13 +59,13 @@ cleanup_on_failure() {
 }
 trap cleanup_on_failure EXIT
 
-log "creating $CRAWLER_NAME ($CRAWLER_TYPE, $CRAWLER_LOCATION) from image $IMAGE"
+log "creating $CRAWLER_NAME, $CRAWLER_TYPE in $CRAWLER_LOCATION, from image $IMAGE"
 hcloud server create --name "$CRAWLER_NAME" --type "$CRAWLER_TYPE" --image "$IMAGE" --location "$CRAWLER_LOCATION" \
     --ssh-key "$HCLOUD_SSH_KEY" --firewall "$FW" --label role=rl-crawler >/dev/null
 IP="$(server_public_ip)"
 wait_for_ssh "$IP"
 
-log "writing secrets to /etc/rlreplay over ssh stdin (root, mode 600)"
+log "writing secrets to /etc/rlreplay over ssh"
 bootstrap_ssh "$IP" 'umask 077 && mkdir -p /etc/rlreplay && cat > /etc/rlreplay/env' <<EOF
 BALLCHASING_API_KEY=$BALLCHASING_API_KEY
 EOF
@@ -88,7 +88,7 @@ BOX_TS_IP="$(bootstrap_ssh "$IP" 'tailscale ip -4' | head -n1)"
 mkdir -p "$LAB_ROOT/boxes/$CRAWLER_NAME"
 printf '%s
 ' "$BOX_TS_IP" >"$(box_ip_file)"
-log "tailnet address $BOX_TS_IP (the lab talks to it by address; the MagicDNS name may carry a -1 suffix while an old node lingers)"
+log "tailnet address $BOX_TS_IP"
 for ((i = 0; i < 24; i++)); do
     if box_ssh true 2>/dev/null; then break; fi
     sleep 5

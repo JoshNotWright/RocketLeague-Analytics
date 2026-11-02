@@ -20,7 +20,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-log "creating build server $BUILD_NAME ($BUILD_TYPE, ubuntu-24.04, $CRAWLER_LOCATION)"
+log "creating build server $BUILD_NAME, $BUILD_TYPE in $CRAWLER_LOCATION"
 hcloud server create --name "$BUILD_NAME" --type "$BUILD_TYPE" --image ubuntu-24.04 \
     --location "$CRAWLER_LOCATION" --ssh-key "$HCLOUD_SSH_KEY" --label role=rl-crawler-build >/dev/null
 IP="$(hcloud server ip "$BUILD_NAME")"
@@ -38,7 +38,7 @@ mkdir -p /opt/rlreplay /var/lib/rlreplay /etc/rlreplay
 chmod 700 /etc/rlreplay
 REMOTE
 
-log "copying the repository (no data, no secrets, no build output)"
+log "copying the repository"
 rsync -az --delete -e "ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new" \
     --exclude '.git' --exclude 'data' --exclude '.venv' --exclude 'reports' --exclude 'tools' \
     --exclude 'rust/rldecode/target' --exclude '__pycache__' --exclude '*.egg-info' --exclude 'build' \
@@ -84,5 +84,5 @@ OLD_IMAGES="$(hcloud image list --type snapshot --selector "$IMAGE_LABEL" -o noh
 for id in $OLD_IMAGES; do
     [[ "$id" != "$NEW_IMAGE" ]] || continue
     log "deleting older snapshot $id"
-    hcloud image delete "$id" >/dev/null || log "could not delete snapshot $id (delete it in the console)"
+    hcloud image delete "$id" >/dev/null || log "could not delete snapshot $id; delete it in the console"
 done

@@ -24,7 +24,7 @@ if ! server_exists; then
 fi
 
 set_control stop
-log "stopping the service (it seals, pushes and validates on the way out)"
+log "stopping the service"
 box_ssh 'systemctl stop rlreplay-crawler' || log "service stop failed or the box is unreachable; trying a final push anyway"
 log "final push"
 if box_ssh "$BOX_BATCH push"; then
@@ -36,7 +36,7 @@ if box_ssh "$BOX_BATCH push"; then
     exit 0
 fi
 if [[ "${FORCE:-0}" == 1 ]]; then
-    log "push failed but --force given; deleting $CRAWLER_NAME (unpushed replays on it are lost)"
+    log "push failed, --force given; deleting $CRAWLER_NAME, unpushed replays on it are lost"
     box_tailscale_logout
     hcloud server delete "$CRAWLER_NAME" >/dev/null
     hcloud firewall delete "${CRAWLER_NAME}-boot" >/dev/null 2>&1 || true

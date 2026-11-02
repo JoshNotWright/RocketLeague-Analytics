@@ -46,10 +46,22 @@ need_cmd() {
     done
 }
 
-# ssh to the box over the tailnet (MagicDNS name = server name). Host keys of ephemeral boxes
-# change every time, so they are accepted on first use and not pinned.
+# ssh to the box over the tailnet. crawler_up.sh records the box's tailnet IP in
+# $LAB_ROOT/boxes/<name>/tailnet_ip; the MagicDNS name is only a fallback, because a deleted
+# ephemeral node can linger for a while and the new box then comes up as <name>-1. Host keys of
+# ephemeral boxes change every time, so they are accepted on first use and not pinned.
+box_ip_file() { echo "$LAB_ROOT/boxes/$CRAWLER_NAME/tailnet_ip"; }
+box_host() {
+    local f; f="$(box_ip_file)"
+    if [[ -s "$f" ]]; then tr -d '[:space:]' <"$f"; else echo "$CRAWLER_NAME"; fi
+}
 box_ssh() {
-    ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=15 "root@${CRAWLER_NAME}" "$@"
+    ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR         -o ConnectTimeout=15 "root@$(box_host)" "$@"
+}
+# Leave the tailnet properly so the ephemeral node disappears at once; best effort.
+box_tailscale_logout() {
+    box_ssh 'tailscale logout' >/dev/null 2>&1 || true
+    rm -f "$(box_ip_file)"
 }
 
 # ssh to a freshly created box by public IP, before it is on the tailnet.

@@ -48,6 +48,8 @@ cleanup_on_failure() {
         return 0
     fi
     log "bring-up failed (exit $rc); deleting $CRAWLER_NAME and its boot firewall"
+    box_tailscale_logout
+    [[ -n "${IP:-}" ]] && bootstrap_ssh "$IP" 'tailscale logout' >/dev/null 2>&1 || true
     hcloud server delete "$CRAWLER_NAME" >/dev/null 2>&1 || true
     hcloud firewall delete "$FW" >/dev/null 2>&1 || true
     set_control stop 2>/dev/null || true
@@ -78,6 +80,12 @@ render_crawler_config | bootstrap_ssh "$IP" 'umask 077 && cat > /etc/rlreplay/cr
 
 log "joining the tailnet as ephemeral node $CRAWLER_NAME"
 bootstrap_ssh "$IP" "systemctl enable --now tailscaled && tailscale up --auth-key file:/etc/rlreplay/ts_authkey --hostname '$CRAWLER_NAME' --accept-dns=true && shred -u /etc/rlreplay/ts_authkey"
+BOX_TS_IP="$(bootstrap_ssh "$IP" 'tailscale ip -4' | head -n1)"
+[[ -n "$BOX_TS_IP" ]] || die "the box joined but reports no tailnet address"
+mkdir -p "$LAB_ROOT/boxes/$CRAWLER_NAME"
+printf '%s
+' "$BOX_TS_IP" >"$(box_ip_file)"
+log "tailnet address $BOX_TS_IP (the lab talks to it by address; the MagicDNS name may carry a -1 suffix while an old node lingers)"
 for ((i = 0; i < 24; i++)); do
     if box_ssh true 2>/dev/null; then break; fi
     sleep 5

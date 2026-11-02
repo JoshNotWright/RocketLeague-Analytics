@@ -29,6 +29,7 @@ box_ssh 'systemctl stop rlreplay-crawler' || log "service stop failed or the box
 log "final push"
 if box_ssh "$BOX_BATCH push"; then
     log "everything validated; deleting $CRAWLER_NAME"
+    box_tailscale_logout
     hcloud server delete "$CRAWLER_NAME" >/dev/null
     hcloud firewall delete "${CRAWLER_NAME}-boot" >/dev/null 2>&1 || true
     log "deleted"
@@ -36,6 +37,7 @@ if box_ssh "$BOX_BATCH push"; then
 fi
 if [[ "${FORCE:-0}" == 1 ]]; then
     log "push failed but --force given; deleting $CRAWLER_NAME (unpushed replays on it are lost)"
+    box_tailscale_logout
     hcloud server delete "$CRAWLER_NAME" >/dev/null
     hcloud firewall delete "${CRAWLER_NAME}-boot" >/dev/null 2>&1 || true
     log "deleted"

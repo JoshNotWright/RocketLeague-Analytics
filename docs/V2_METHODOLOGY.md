@@ -237,7 +237,8 @@ resumable. The per-band pipeline is the usual `meta-table`, `extract`, `touches`
 or comma-separate), so one fit covers every band, with each match's mean rank as a feature
 (`rlreplay/ranks.py`, see V2_XG.md). `build-reference --band diamond --table ...` keeps only
 games whose mean rank falls in that band; `score --reference rlreplay/reference` then compares
-each player with the band they actually played in.
+each player with the band they actually played in. As of 2026-11-01 `rlreplay/reference/` holds the all-ranks, GC and Diamond
+references; Champion waits for a crawl with repeat Champion players (see V2_XG.md).
 
 ### Second stage: players, not replays
 

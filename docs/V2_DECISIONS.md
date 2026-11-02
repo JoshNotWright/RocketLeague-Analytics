@@ -169,6 +169,51 @@ dominated by PastorKurt and PastorCamerius (121 and 120 games); their GC gaps ar
 0.187 and 0.189. The band crawl (`scripts/crawl_bands.ps1`, `crawl_band_players.ps1`) is what
 turns this into a statement about Diamond players in general rather than two of them.
 
+## Fourth pass: the band corpus as the Diamond population
+
+Same model, same split, with the 8,642 band-crawl games added (`reports/v2-decisions-bands`:
+20.7M decision points available, 4.0M sampled). Every band game is played after 2025-07, so
+the training rows are unchanged and the band corpus is pure held-out test (2.6M rows, 292
+players with 10+ held-out games against 78 before). Log loss 0.941 against the prior's 1.541,
+accuracy 0.606; the test mix is now mostly Diamond to GC rather than GC+, so the numbers are
+not comparable to the third pass and the point of this fit is what follows.
+
+| player rank bin | held-out rows | challenge rate | GC policy would | GC gap (nats) |
+| --- | --- | --- | --- | --- |
+| 48-59 (Diamond) | 391,862 | 0.201 | 0.222 | 0.014 |
+| 60-71 (Champion) | 592,428 | 0.210 | 0.227 | 0.009 |
+| 72-83 (GC) | 394,806 | 0.226 | 0.230 | 0.001 |
+| 84-95 (SSL) | 217,179 | 0.240 | 0.233 | 0.007 |
+
+Monotone: in the same states, the GC-conditioned policy challenges more often than Diamond and
+Champion players do, matches GC, and challenges less than SSL. The third pass's reading that
+lower ranks are not too passive was made on two Diamond accounts; with 115 Diamond players it
+does not hold. Split-half reliability of the per-player statistics, overall and **within
+band** (players whose median own rank falls in the band, 10+ held-out games), which answers
+the rank-confound caveat from the third pass:
+
+| statistic | all (264) | Diamond (110) | Champion (40) | GC (114) |
+| --- | --- | --- | --- | --- |
+| GC gap | 0.62 | 0.63 | 0.63 | 0.46 |
+| challenge where the GC policy would not | 0.49 | 0.46 | 0.48 | 0.31 |
+| retreat where the GC policy challenges | 0.24 | 0.35 | 0.14 | 0.16 |
+| challenge rate minus own-rank policy | 0.46 (292) | | | |
+
+The GC gap is a persistent trait of a Diamond player within Diamond (0.63), not a restatement
+of rank. Over-challenging persists at every band; under-challenging persists at Diamond (0.35)
+and is noise at GC, which is what you would expect if passivity is a lower-rank habit.
+
+PastorKurt among the 115 Diamond players: GC gap 0.044 nats, 95th percentile (median 0.009,
+interquartile 0.002 to 0.022); challenge rate 0.177 against an own-rank policy expectation of
+0.187, 17th percentile; retreats where the GC policy challenges 2.3% of decision points, 94th
+percentile; challenges where it would not 5.8%, 35th percentile. So his decisions sit further
+from GC behaviour than almost any Diamond player in the corpus, and the direction is passive:
+he challenges less than Diamond peers and far less than the GC policy. PastorCamerius: gap
+0.026 (83rd), challenge rate 0.204 (53rd), under-challenge 43rd, over-challenge 59th.
+
+What this is not: a value statement. The policy says what GC players do, not that doing it
+wins; the win-probability counterfactual in the handoff notes is the next model.
+
 ## Reproducing
 
 ```powershell
@@ -192,4 +237,11 @@ Third pass (rank-conditioned, needs the per-source decision datasets and tables)
 .\.venv\Scripts\python -m rlreplay decode --raw data/raw/pastorkurt --out data/decoded/pastorkurt
 .\.venv\Scripts\python -m rlreplay decisions-build --decoded data/decoded/pastorkurt --out data/frames/decisions_pastorkurt_h25 --horizon 2.5
 .\.venv\Scripts\python -m rlreplay decisions-fit --frames data/frames/decisions_2v2_h25 --frames data/frames/decisions_pastorkurt_h25 --table data/features/player_game_2v2.parquet --table data/features/player_game_pastorkurt.parquet --out reports/v2-decisions-ranked --train-end 2025-04-01 --valid-end 2025-07-01 --decision-points-only --sample-rows 4000000
+```
+
+Fourth pass (band corpus; stage one is `meta-table`, `decode`, `extract`, `touches`, `decisions-build`
+per band folder):
+
+```powershell
+.\.venv\Scripts\python -m rlreplay decisions-fit --frames data/frames/decisions_2v2_h25,data/frames/decisions_pastorkurt_h25,data/frames/decisions_2v2_diamond_h25,data/frames/decisions_2v2_champion_h25,data/frames/decisions_2v2_gc_h25,data/frames/decisions_2v2_diamond_players_h25 --table data/features/player_game_2v2.parquet,data/features/player_game_pastorkurt.parquet,data/features/player_game_2v2_diamond.parquet,data/features/player_game_2v2_champion.parquet,data/features/player_game_2v2_gc.parquet,data/features/player_game_2v2_diamond_players.parquet --out reports/v2-decisions-bands --train-end 2025-04-01 --valid-end 2025-07-01 --decision-points-only --sample-rows 4000000
 ```

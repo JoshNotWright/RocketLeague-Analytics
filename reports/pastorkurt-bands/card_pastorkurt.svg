@@ -1,0 +1,257 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 1044" width="760" height="1044" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" class="rl-card" role="img" aria-label="Player card for PastorKurt">
+<style>
+.rl-card{--bg:#f7f6f2;--panel:#ffffff;--ink:#17191c;--ink-2:#5a5e66;--ink-3:#8a8f99;--rule:#e2e0d8;--track:#ebe9e2;--good-2:#1c5cab;--good-1:#5598e7;--mid:#b9bdc6;--poor-1:#ec835a;--poor-2:#c83a3a;--neutral-bar:#7f8894;--neutral:#c9ccd2;--accent:#1c5cab}
+@media (prefers-color-scheme: dark){.rl-card:not(.light){--bg:#15171a;--panel:#1d2024;--ink:#f0efec;--ink-2:#b8bcc4;--ink-3:#8a8f99;--rule:#2d3137;--track:#2a2e34;--good-2:#6da7ec;--good-1:#3987e5;--mid:#5a606b;--poor-1:#ec835a;--poor-2:#e66767;--neutral-bar:#9aa3af;--neutral:#454b55;--accent:#6da7ec}}
+.rl-card.dark{--bg:#15171a;--panel:#1d2024;--ink:#f0efec;--ink-2:#b8bcc4;--ink-3:#8a8f99;--rule:#2d3137;--track:#2a2e34;--good-2:#6da7ec;--good-1:#3987e5;--mid:#5a606b;--poor-1:#ec835a;--poor-2:#e66767;--neutral-bar:#9aa3af;--neutral:#454b55;--accent:#6da7ec}
+.t{fill:var(--ink)}.t2{fill:var(--ink-2)}.t3{fill:var(--ink-3)}.num{font-variant-numeric:tabular-nums}
+.bar-row:hover .track{stroke:var(--accent);stroke-width:1}
+</style>
+<rect width="760" height="1044" fill="var(--bg)"/>
+<text x="24" y="44" class="t" font-size="30" font-weight="700">PastorKurt</text>
+<text x="24" y="68" class="t2" font-size="13">Ranked doubles · median match rank Diamond II div 4 · diamond band</text>
+<text x="24" y="88" class="t2 num" font-size="13">2902 games · win rate 52% · compared with 103 diamond players with 30+ games</text>
+<text x="736" y="44" class="t3" font-size="11" text-anchor="end" letter-spacing="1.5">RLREPLAY PLAYER CARD</text>
+<text x="736" y="60" class="t3" font-size="11" text-anchor="end">percentile vs diamond · bars fade with reliability</text>
+<line x1="24" y1="104" x2="736" y2="104" stroke="var(--rule)"/>
+<text x="250" y="116" class="t3" font-size="10">0</text>
+<text x="400.0" y="116" class="t3" font-size="10" text-anchor="middle">50</text>
+<text x="550" y="116" class="t3" font-size="10" text-anchor="end">100</text>
+<text x="24" y="138" class="t" font-size="12" font-weight="700" letter-spacing="1">CHANCE CREATION</text>
+<g class="bar-row" data-metric="xg" data-label="Expected goals" data-raw="1.38" data-shrunk="1.3761695858299898" data-median="1.4686372757216763" data-pct="40" data-reliability="0.6936753856261731" data-direction="higher">
+<text x="24" y="167.0" class="t" font-size="12">Expected goals</text>
+<text x="240" y="167.0" class="t2 num" font-size="11" text-anchor="end">1.38</text>
+<rect class="track" x="250" y="156.0" width="300" height="14" rx="3" fill="var(--track)"/>
+<line x1="400.0" y1="154.0" x2="400.0" y2="172.0" stroke="var(--rule)"/>
+<rect x="250" y="156.0" width="119.4" height="14" rx="3" fill="var(--poor-1)" opacity="0.92"/>
+<text x="560" y="167.0" class="t num" font-size="12" font-weight="700">40</text>
+</g>
+<g class="bar-row" data-metric="shots" data-label="Shots" data-raw="3.0" data-shrunk="2.9747565263678677" data-median="3.2" data-pct="35" data-reliability="0.7015432201773749" data-direction="higher">
+<text x="24" y="193.0" class="t" font-size="12">Shots</text>
+<text x="240" y="193.0" class="t2 num" font-size="11" text-anchor="end">3.0</text>
+<rect class="track" x="250" y="182.0" width="300" height="14" rx="3" fill="var(--track)"/>
+<line x1="400.0" y1="180.0" x2="400.0" y2="198.0" stroke="var(--rule)"/>
+<rect x="250" y="182.0" width="104.9" height="14" rx="3" fill="var(--poor-1)" opacity="0.93"/>
+<text x="560" y="193.0" class="t num" font-size="12" font-weight="700">35</text>
+</g>
+<g class="bar-row" data-metric="mean_threat" data-label="Situation quality" data-raw="0.126" data-shrunk="0.1256590873829627" data-median="0.1243159969917462" data-pct="58" data-reliability="0.4097729988800962" data-direction="higher">
+<text x="24" y="219.0" class="t" font-size="12">Situation quality</text>
+<text x="240" y="219.0" class="t2 num" font-size="11" text-anchor="end">0.126</text>
+<rect class="track" x="250" y="208.0" width="300" height="14" rx="3" fill="var(--track)"/>
+<line x1="400.0" y1="206.0" x2="400.0" y2="224.0" stroke="var(--rule)"/>
+<rect x="250" y="208.0" width="174.8" height="14" rx="3" fill="var(--mid)" opacity="0.67"/>
+<text x="560" y="219.0" class="t num" font-size="12" font-weight="700">58</text>
+</g>
+<g class="bar-row" data-metric="touches" data-label="Touches" data-raw="36" data-shrunk="35.822317707168196" data-median="39.725" data-pct="19" data-reliability="0.7836772316354821" data-direction="higher">
+<text x="24" y="245.0" class="t" font-size="12">Touches</text>
+<text x="240" y="245.0" class="t2 num" font-size="11" text-anchor="end">36</text>
+<rect class="track" x="250" y="234.0" width="300" height="14" rx="3" fill="var(--track)"/>
+<line x1="400.0" y1="232.0" x2="400.0" y2="250.0" stroke="var(--rule)"/>
+<rect x="250" y="234.0" width="58.3" height="14" rx="3" fill="var(--poor-2)" opacity="1.00"/>
+<text x="560" y="245.0" class="t num" font-size="12" font-weight="700">19</text>
+</g>
+<text x="24" y="264" class="t" font-size="12" font-weight="700" letter-spacing="1">FINISHING</text>
+<g class="bar-row" data-metric="goals" data-label="Goals" data-raw="1.39" data-shrunk="1.3937554700449193" data-median="1.45" data-pct="40" data-reliability="0.6116721343899866" data-direction="higher">
+<text x="24" y="293.0" class="t" font-size="12">Goals</text>
+<text x="240" y="293.0" class="t2 num" font-size="11" text-anchor="end">1.39</text>
+<rect class="track" x="250" y="282.0" width="300" height="14" rx="3" fill="var(--track)"/>
+<line x1="400.0" y1="280.0" x2="400.0" y2="298.0" stroke="var(--rule)"/>
+<rect x="250" y="282.0" width="119.4" height="14" rx="3" fill="var(--poor-1)" opacity="0.85"/>
+<text x="560" y="293.0" class="t num" font-size="12" font-weight="700">40</text>
+</g>
+<g class="bar-row" data-metric="goals_above_xg" data-label="Goals above xG" data-raw="+0.02" data-shrunk="0.017479442337332878" data-median="0.026747057122108127" data-pct="46" data-reliability="0.22186657397161394" data-direction="higher">
+<text x="24" y="319.0" class="t" font-size="12">Goals above xG</text>
+<text x="240" y="319.0" class="t2 num" font-size="11" text-anchor="end">+0.02</text>
+<rect class="track" x="250" y="308.0" width="300" height="14" rx="3" fill="var(--track)"/>
+<line x1="400.0" y1="306.0" x2="400.0" y2="324.0" stroke="var(--rule)"/>
+<rect x="250" y="308.0" width="136.9" height="14" rx="3" fill="var(--mid)" opacity="0.50"/>
+<text x="560" y="319.0" class="t num" font-size="12" font-weight="700">46</text>
+</g>
+<text x="24" y="338" class="t" font-size="12" font-weight="700" letter-spacing="1">IMPACT</text>
+<g class="bar-row" data-metric="value_added" data-label="Value added" data-raw="+0.21" data-shrunk="0.20535446412198305" data-median="0.20924317126993727" data-pct="49" data-reliability="0.5295666181363343" data-direction="higher">
+<text x="24" y="367.0" class="t" font-size="12">Value added</text>
+<text x="240" y="367.0" class="t2 num" font-size="11" text-anchor="end">+0.21</text>
+<rect class="track" x="250" y="356.0" width="300" height="14" rx="3" fill="var(--track)"/>
+<line x1="400.0" y1="354.0" x2="400.0" y2="372.0" stroke="var(--rule)"/>
+<rect x="250" y="356.0" width="145.6" height="14" rx="3" fill="var(--mid)" opacity="0.78"/>
+<text x="560" y="367.0" class="t num" font-size="12" font-weight="700">49</text>
+</g>
+<g class="bar-row" data-metric="challenge_win_rate" data-label="Challenge win rate" data-raw="57%" data-shrunk="0.5697421792921922" data-median="0.5561114789654914" data-pct="73" data-reliability="0.327971664079616" data-direction="higher">
+<text x="24" y="393.0" class="t" font-size="12">Challenge win rate</text>
+<text x="240" y="393.0" class="t2 num" font-size="11" text-anchor="end">57%</text>
+<rect class="track" x="250" y="382.0" width="300" height="14" rx="3" fill="var(--track)"/>
+<line x1="400.0" y1="380.0" x2="400.0" y2="398.0" stroke="var(--rule)"/>
+<rect x="250" y="382.0" width="218.4" height="14" rx="3" fill="var(--good-1)" opacity="0.60"/>
+<text x="560" y="393.0" class="t num" font-size="12" font-weight="700">73</text>
+</g>
+<text x="24" y="412" class="t" font-size="12" font-weight="700" letter-spacing="1">DEFENCE</text>
+<g class="bar-row" data-metric="gsax" data-label="Save quality (GSAx)" data-raw="-0.11" data-shrunk="-0.10633920415685306" data-median="-0.11962339031202365" data-pct="54" data-reliability="0.1840901757046607" data-direction="higher">
+<text x="24" y="441.0" class="t" font-size="12">Save quality (GSAx)</text>
+<text x="240" y="441.0" class="t2 num" font-size="11" text-anchor="end">-0.11</text>
+<rect class="track" x="250" y="430.0" width="300" height="14" rx="3" fill="var(--track)"/>
+<line x1="400.0" y1="428.0" x2="400.0" y2="446.0" stroke="var(--rule)"/>
+<rect x="250" y="430.0" width="163.1" height="14" rx="3" fill="var(--mid)" opacity="0.47"/>
+<text x="560" y="441.0" class="t num" font-size="12" font-weight="700">54</text>
+<text x="590" y="441.0" class="t3" font-size="10">noise</text>
+</g>
+<g class="bar-row" data-metric="shots_faced" data-label="Shots faced" data-raw="2.5" data-shrunk="2.4983956594712398" data-median="2.3" data-pct="76" data-reliability="0.29159777697775524" data-direction="neutral">
+<text x="24" y="467.0" class="t" font-size="12">Shots faced</text>
+<text x="240" y="467.0" class="t2 num" font-size="11" text-anchor="end">2.5</text>
+<rect class="track" x="250" y="456.0" width="300" height="14" rx="3" fill="var(--track)"/>
+<line x1="400.0" y1="454.0" x2="400.0" y2="472.0" stroke="var(--rule)"/>
+<rect x="250" y="456.0" width="227.2" height="14" rx="3" fill="var(--neutral-bar)" opacity="0.56"/>
+<text x="560" y="467.0" class="t num" font-size="12" font-weight="700">76</text>
+<text x="590" y="467.0" class="t3" font-size="10">style</text>
+</g>
+<g class="bar-row" data-metric="demos_taken" data-label="Demos taken" data-raw="0.58" data-shrunk="0.582420896134728" data-median="0.575" data-pct="45" data-reliability="0.1095467793289109" data-direction="lower">
+<text x="24" y="493.0" class="t" font-size="12">Demos taken</text>
+<text x="240" y="493.0" class="t2 num" font-size="11" text-anchor="end">0.58</text>
+<rect class="track" x="250" y="482.0" width="300" height="14" rx="3" fill="var(--track)"/>
+<line x1="400.0" y1="480.0" x2="400.0" y2="498.0" stroke="var(--rule)"/>
+<rect x="250" y="482.0" width="134.0" height="14" rx="3" fill="var(--mid)" opacity="0.40"/>
+<text x="560" y="493.0" class="t num" font-size="12" font-weight="700">45</text>
+<text x="590" y="493.0" class="t3" font-size="10">noise</text>
+</g>
+<g class="bar-row" data-metric="demos_inflicted" data-label="Demos inflicted" data-raw="0.59" data-shrunk="0.5935421115369179" data-median="0.725" data-pct="32" data-reliability="0.7702258517859" data-direction="higher">
+<text x="24" y="519.0" class="t" font-size="12">Demos inflicted</text>
+<text x="240" y="519.0" class="t2 num" font-size="11" text-anchor="end">0.59</text>
+<rect class="track" x="250" y="508.0" width="300" height="14" rx="3" fill="var(--track)"/>
+<line x1="400.0" y1="506.0" x2="400.0" y2="524.0" stroke="var(--rule)"/>
+<rect x="250" y="508.0" width="96.1" height="14" rx="3" fill="var(--poor-1)" opacity="0.99"/>
+<text x="560" y="519.0" class="t num" font-size="12" font-weight="700">32</text>
+</g>
+<text x="24" y="538" class="t" font-size="12" font-weight="700" letter-spacing="1">PACE AND BOOST</text>
+<g class="bar-row" data-metric="supersonic_frac" data-label="Supersonic time" data-raw="12%" data-shrunk="0.12218754873341588" data-median="0.11128987151431302" data-pct="64" data-reliability="0.9744662177059015" data-direction="higher">
+<text x="24" y="567.0" class="t" font-size="12">Supersonic time</text>
+<text x="240" y="567.0" class="t2 num" font-size="11" text-anchor="end">12%</text>
+<rect class="track" x="250" y="556.0" width="300" height="14" rx="3" fill="var(--track)"/>
+<line x1="400.0" y1="554.0" x2="400.0" y2="572.0" stroke="var(--rule)"/>
+<rect x="250" y="556.0" width="192.2" height="14" rx="3" fill="var(--good-1)" opacity="1.00"/>
+<text x="560" y="567.0" class="t num" font-size="12" font-weight="700">64</text>
+</g>
+<g class="bar-row" data-metric="avg_speed" data-label="Average speed" data-raw="1541" data-shrunk="1541.2028463142863" data-median="1465.0627080831214" data-pct="83" data-reliability="0.9341516507476395" data-direction="higher">
+<text x="24" y="593.0" class="t" font-size="12">Average speed</text>
+<text x="240" y="593.0" class="t2 num" font-size="11" text-anchor="end">1541</text>
+<rect class="track" x="250" y="582.0" width="300" height="14" rx="3" fill="var(--track)"/>
+<line x1="400.0" y1="580.0" x2="400.0" y2="598.0" stroke="var(--rule)"/>
+<rect x="250" y="582.0" width="250.5" height="14" rx="3" fill="var(--good-2)" opacity="1.00"/>
+<text x="560" y="593.0" class="t num" font-size="12" font-weight="700">83</text>
+</g>
+<g class="bar-row" data-metric="big_pads" data-label="Big pads" data-raw="14.4" data-shrunk="14.381221322952063" data-median="15.775" data-pct="35" data-reliability="0.9028182384525555" data-direction="neutral">
+<text x="24" y="619.0" class="t" font-size="12">Big pads</text>
+<text x="240" y="619.0" class="t2 num" font-size="11" text-anchor="end">14.4</text>
+<rect class="track" x="250" y="608.0" width="300" height="14" rx="3" fill="var(--track)"/>
+<line x1="400.0" y1="606.0" x2="400.0" y2="624.0" stroke="var(--rule)"/>
+<rect x="250" y="608.0" width="104.9" height="14" rx="3" fill="var(--neutral-bar)" opacity="1.00"/>
+<text x="560" y="619.0" class="t num" font-size="12" font-weight="700">35</text>
+<text x="590" y="619.0" class="t3" font-size="10">style</text>
+</g>
+<g class="bar-row" data-metric="small_pads" data-label="Small pads" data-raw="61.7" data-shrunk="61.64213471036123" data-median="51.375" data-pct="90" data-reliability="0.8689495143108372" data-direction="neutral">
+<text x="24" y="645.0" class="t" font-size="12">Small pads</text>
+<text x="240" y="645.0" class="t2 num" font-size="11" text-anchor="end">61.7</text>
+<rect class="track" x="250" y="634.0" width="300" height="14" rx="3" fill="var(--track)"/>
+<line x1="400.0" y1="632.0" x2="400.0" y2="650.0" stroke="var(--rule)"/>
+<rect x="250" y="634.0" width="270.9" height="14" rx="3" fill="var(--neutral-bar)" opacity="1.00"/>
+<text x="560" y="645.0" class="t num" font-size="12" font-weight="700">90</text>
+<text x="590" y="645.0" class="t3" font-size="10">style</text>
+</g>
+<g class="bar-row" data-metric="avg_boost" data-label="Average boost" data-raw="48" data-shrunk="48.44324501215597" data-median="52.09472995068588" data-pct="26" data-reliability="0.9511362361208365" data-direction="higher">
+<text x="24" y="671.0" class="t" font-size="12">Average boost</text>
+<text x="240" y="671.0" class="t2 num" font-size="11" text-anchor="end">48</text>
+<rect class="track" x="250" y="660.0" width="300" height="14" rx="3" fill="var(--track)"/>
+<line x1="400.0" y1="658.0" x2="400.0" y2="676.0" stroke="var(--rule)"/>
+<rect x="250" y="660.0" width="78.6" height="14" rx="3" fill="var(--poor-1)" opacity="1.00"/>
+<text x="560" y="671.0" class="t num" font-size="12" font-weight="700">26</text>
+</g>
+<g class="bar-row" data-metric="low_boost_frac" data-label="Time under 20 boost" data-raw="26%" data-shrunk="0.2591277494034386" data-median="0.24087722717013413" data-pct="32" data-reliability="0.9374354382127743" data-direction="lower">
+<text x="24" y="697.0" class="t" font-size="12">Time under 20 boost</text>
+<text x="240" y="697.0" class="t2 num" font-size="11" text-anchor="end">26%</text>
+<rect class="track" x="250" y="686.0" width="300" height="14" rx="3" fill="var(--track)"/>
+<line x1="400.0" y1="684.0" x2="400.0" y2="702.0" stroke="var(--rule)"/>
+<rect x="250" y="686.0" width="96.1" height="14" rx="3" fill="var(--poor-1)" opacity="1.00"/>
+<text x="560" y="697.0" class="t num" font-size="12" font-weight="700">32</text>
+</g>
+<text x="24" y="716" class="t" font-size="12" font-weight="700" letter-spacing="1">POSITIONING</text>
+<g class="bar-row" data-metric="behind_ball_frac" data-label="Behind the ball" data-raw="75%" data-shrunk="0.7482580590111436" data-median="0.721265373171606" data-pct="85" data-reliability="0.8659600316135854" data-direction="neutral">
+<text x="24" y="745.0" class="t" font-size="12">Behind the ball</text>
+<text x="240" y="745.0" class="t2 num" font-size="11" text-anchor="end">75%</text>
+<rect class="track" x="250" y="734.0" width="300" height="14" rx="3" fill="var(--track)"/>
+<line x1="400.0" y1="732.0" x2="400.0" y2="750.0" stroke="var(--rule)"/>
+<rect x="250" y="734.0" width="256.3" height="14" rx="3" fill="var(--neutral-bar)" opacity="1.00"/>
+<text x="560" y="745.0" class="t num" font-size="12" font-weight="700">85</text>
+<text x="590" y="745.0" class="t3" font-size="10">style</text>
+</g>
+<g class="bar-row" data-metric="last_man_low_boost_frac" data-label="Last man, low boost" data-raw="11%" data-shrunk="0.11350967230096243" data-median="0.0800297383209442" data-pct="13" data-reliability="0.8880938645027874" data-direction="lower">
+<text x="24" y="771.0" class="t" font-size="12">Last man, low boost</text>
+<text x="240" y="771.0" class="t2 num" font-size="11" text-anchor="end">11%</text>
+<rect class="track" x="250" y="760.0" width="300" height="14" rx="3" fill="var(--track)"/>
+<line x1="400.0" y1="758.0" x2="400.0" y2="776.0" stroke="var(--rule)"/>
+<rect x="250" y="760.0" width="37.9" height="14" rx="3" fill="var(--poor-2)" opacity="1.00"/>
+<text x="560" y="771.0" class="t num" font-size="12" font-weight="700">13</text>
+</g>
+<g class="bar-row" data-metric="avg_dist_mate" data-label="Distance to teammate" data-raw="2930" data-shrunk="2930.4931324445706" data-median="3249.319172695001" data-pct="5" data-reliability="0.9330447383744442" data-direction="neutral">
+<text x="24" y="797.0" class="t" font-size="12">Distance to teammate</text>
+<text x="240" y="797.0" class="t2 num" font-size="11" text-anchor="end">2930</text>
+<rect class="track" x="250" y="786.0" width="300" height="14" rx="3" fill="var(--track)"/>
+<line x1="400.0" y1="784.0" x2="400.0" y2="802.0" stroke="var(--rule)"/>
+<rect x="250" y="786.0" width="14.6" height="14" rx="3" fill="var(--neutral-bar)" opacity="1.00"/>
+<text x="560" y="797.0" class="t num" font-size="12" font-weight="700">5</text>
+<text x="590" y="797.0" class="t3" font-size="10">style</text>
+</g>
+<g class="bar-row" data-metric="kickoff_time_to_ball" data-label="Kickoff time to ball" data-raw="2.15s" data-shrunk="2.1492901209439377" data-median="2.1619488731884062" data-pct="52" data-reliability="0.6646492286082799" data-direction="lower">
+<text x="24" y="823.0" class="t" font-size="12">Kickoff time to ball</text>
+<text x="240" y="823.0" class="t2 num" font-size="11" text-anchor="end">2.15s</text>
+<rect class="track" x="250" y="812.0" width="300" height="14" rx="3" fill="var(--track)"/>
+<line x1="400.0" y1="810.0" x2="400.0" y2="828.0" stroke="var(--rule)"/>
+<rect x="250" y="812.0" width="157.3" height="14" rx="3" fill="var(--mid)" opacity="0.90"/>
+<text x="560" y="823.0" class="t num" font-size="12" font-weight="700">52</text>
+</g>
+<line x1="24" y1="838" x2="736" y2="838" stroke="var(--rule)"/>
+<text x="24" y="860" class="t" font-size="12" font-weight="700" letter-spacing="1">BY YEAR</text>
+<text x="24.0" y="886" class="t2" font-size="11">xG / game</text>
+<path d="M24.0,974.0 L63.3,963.4 L102.7,948.6 L142.0,936.7 L181.3,934.0 L220.7,894.0" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/>
+<circle cx="24.0" cy="974.0" r="3" fill="var(--accent)" stroke="var(--bg)" stroke-width="2"/>
+<text x="24.0" y="988" class="t3 num" font-size="10" text-anchor="middle">2021</text>
+<circle cx="63.3" cy="963.4" r="3" fill="var(--accent)" stroke="var(--bg)" stroke-width="2"/>
+<text x="63.3" y="988" class="t3 num" font-size="10" text-anchor="middle">2022</text>
+<circle cx="102.7" cy="948.6" r="3" fill="var(--accent)" stroke="var(--bg)" stroke-width="2"/>
+<text x="102.7" y="988" class="t3 num" font-size="10" text-anchor="middle">2023</text>
+<circle cx="142.0" cy="936.7" r="3" fill="var(--accent)" stroke="var(--bg)" stroke-width="2"/>
+<text x="142.0" y="988" class="t3 num" font-size="10" text-anchor="middle">2024</text>
+<circle cx="181.3" cy="934.0" r="3" fill="var(--accent)" stroke="var(--bg)" stroke-width="2"/>
+<text x="181.3" y="988" class="t3 num" font-size="10" text-anchor="middle">2025</text>
+<circle cx="220.7" cy="894.0" r="3" fill="var(--accent)" stroke="var(--bg)" stroke-width="2"/>
+<text x="220.7" y="988" class="t3 num" font-size="10" text-anchor="middle">2026</text>
+<text x="226.7" y="898.0" class="t num" font-size="11" font-weight="700">1.79</text>
+<text x="266.66666666666663" y="886" class="t2" font-size="11">Value added</text>
+<path d="M266.7,959.2 L306.0,960.3 L345.3,974.0 L384.7,950.9 L424.0,927.1 L463.3,894.0" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/>
+<circle cx="266.7" cy="959.2" r="3" fill="var(--accent)" stroke="var(--bg)" stroke-width="2"/>
+<text x="266.7" y="988" class="t3 num" font-size="10" text-anchor="middle">2021</text>
+<circle cx="306.0" cy="960.3" r="3" fill="var(--accent)" stroke="var(--bg)" stroke-width="2"/>
+<text x="306.0" y="988" class="t3 num" font-size="10" text-anchor="middle">2022</text>
+<circle cx="345.3" cy="974.0" r="3" fill="var(--accent)" stroke="var(--bg)" stroke-width="2"/>
+<text x="345.3" y="988" class="t3 num" font-size="10" text-anchor="middle">2023</text>
+<circle cx="384.7" cy="950.9" r="3" fill="var(--accent)" stroke="var(--bg)" stroke-width="2"/>
+<text x="384.7" y="988" class="t3 num" font-size="10" text-anchor="middle">2024</text>
+<circle cx="424.0" cy="927.1" r="3" fill="var(--accent)" stroke="var(--bg)" stroke-width="2"/>
+<text x="424.0" y="988" class="t3 num" font-size="10" text-anchor="middle">2025</text>
+<circle cx="463.3" cy="894.0" r="3" fill="var(--accent)" stroke="var(--bg)" stroke-width="2"/>
+<text x="463.3" y="988" class="t3 num" font-size="10" text-anchor="middle">2026</text>
+<text x="469.3" y="898.0" class="t num" font-size="11" font-weight="700">+0.58</text>
+<text x="509.3333333333333" y="886" class="t2" font-size="11">Goals above xG</text>
+<path d="M509.3,974.0 L548.7,894.0 L588.0,937.2 L627.3,933.8 L666.7,925.3 L706.0,953.5" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/>
+<circle cx="509.3" cy="974.0" r="3" fill="var(--accent)" stroke="var(--bg)" stroke-width="2"/>
+<text x="509.3" y="988" class="t3 num" font-size="10" text-anchor="middle">2021</text>
+<circle cx="548.7" cy="894.0" r="3" fill="var(--accent)" stroke="var(--bg)" stroke-width="2"/>
+<text x="548.7" y="988" class="t3 num" font-size="10" text-anchor="middle">2022</text>
+<circle cx="588.0" cy="937.2" r="3" fill="var(--accent)" stroke="var(--bg)" stroke-width="2"/>
+<text x="588.0" y="988" class="t3 num" font-size="10" text-anchor="middle">2023</text>
+<circle cx="627.3" cy="933.8" r="3" fill="var(--accent)" stroke="var(--bg)" stroke-width="2"/>
+<text x="627.3" y="988" class="t3 num" font-size="10" text-anchor="middle">2024</text>
+<circle cx="666.7" cy="925.3" r="3" fill="var(--accent)" stroke="var(--bg)" stroke-width="2"/>
+<text x="666.7" y="988" class="t3 num" font-size="10" text-anchor="middle">2025</text>
+<circle cx="706.0" cy="953.5" r="3" fill="var(--accent)" stroke="var(--bg)" stroke-width="2"/>
+<text x="706.0" y="988" class="t3 num" font-size="10" text-anchor="middle">2026</text>
+<text x="712.0" y="957.5" class="t num" font-size="11" font-weight="700">-0.03</text>
+<text x="24" y="1018" class="t3" font-size="10">Percentiles use shrunk means (empirical Bayes); lower-is-better metrics are shown in the good direction. xG, threat and value added are conditioned on match rank.</text>
+<text x="24" y="1032" class="t3" font-size="10">Faded bars persist least from game to game for anyone (split-half reliability); "noise" marks metrics under 0.2, "style" metrics with no good direction.</text>
+</svg>

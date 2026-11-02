@@ -263,6 +263,43 @@ conclusion as before. Scoring (`rlreplay score`) reads match ranks from the `met
 the crawler writes next to the replays; without one the models fall back to their default
 path for a missing `game_rank` and the report says so.
 
+### The band corpus lands (2026-11-01)
+
+The monthly band crawl plus the Diamond player stage added 8,642 ranked-doubles games
+(2,128 Diamond, 2,012 Champion, 2,000 GC windows; 2,502 games of the 120 most-seen Diamond
+players), all played from 2025-07 on, so with the unchanged split every one of them is held-out
+test data and the training set is identical to the fit above (`reports/v2-xg-bands` reproduces
+`v2-xg-ranked` to the touch). What changes is the evaluation: calibration by band on real
+populations, and the references.
+
+| band (held-out shots) | shots | goal rate | rank-conditioned xG |
+| --- | --- | --- | --- |
+| diamond | 88,734 | 0.351 | 0.357 |
+| champion | 30,719 | 0.318 | 0.326 |
+| gc | 86,778 | 0.264 | 0.272 |
+
+Within a point at every band. One population effect shows up when the GC shots are split by
+source: Kaggle GC+ games score 0.248 per shot (xG 0.249) while the crawled `grand-champion-1..3`
+band scores 0.293 (xG 0.313). Ballchasing's GC tag is a looser population than the Kaggle
+selection, so the GC reference built from Kaggle describes a slightly stronger peer group than
+"players tagged GC"; the fix is a GC reference from the crawl once its player stage has run.
+
+References built from all sources with `--min-games 30`: `gcplus_2v2.json` (205 players, all
+ranks), `gc_2v2.json` (102), and new `diamond_2v2.json` (103 players, 28,575 player-games).
+Champion came out with 2 players, since the Champion player stage was cancelled in favour of
+the cloud crawler, and that file is not shipped: Champion players fall back to the all-ranks
+reference until the cloud corpus lands. Split-half reliability per metric in the Diamond
+reference against GC: goals above xG 0.22 against 0.13, value added 0.53 against 0.32, xG per
+game 0.69 against 0.49, movement 0.93 against 0.92; finishing stays the noisiest metric at
+every rank.
+
+PastorKurt against Diamond peers rather than all ranks (`reports/pastorkurt-bands`): value
+added 49th percentile (was 72nd against all ranks), finishing 46th (52nd), challenge win rate
+73rd (89th), average speed 83rd (19th), touches 19th (0). The all-ranks comparison flattered
+the ball-involvement metrics and punished movement; against the right peers the picture is an
+average-value Diamond player who is fast, stays behind the ball (85th) and sits close to his
+teammate (5th percentile distance).
+
 References are now built per band (`build-reference --band diamond|champion|gc --table ...`)
 and `score` picks, for each player, the reference whose band contains their median match
 rank, falling back to the all-ranks file. The Diamond and Champion references need the

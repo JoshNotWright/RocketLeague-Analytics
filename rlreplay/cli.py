@@ -120,6 +120,7 @@ def _gather_parts(parts_dir: Path):
 
 
 def cmd_extract(args):
+    import polars as pl
     paths = sorted(str(p) for p in Path(args.raw).glob("*.replay"))
     if args.limit:
         paths = paths[:args.limit]

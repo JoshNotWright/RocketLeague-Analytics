@@ -102,6 +102,9 @@ set_control() {
 }
 
 # Render /etc/rlreplay/crawler.json for the box from the lab.env settings.
+# rclone flags: the lab tree may sit on an SMB mount, where a just-written file can report size
+# 0 and a just-deleted one refuses re-creation; so no post-copy size check (the lab validates
+# every decoded file by sha256), no modtime setstat, and no delete-and-retry on the same path.
 render_crawler_config() {
     local first="${CRAWLER_MONTHS%%..*}" last="${CRAWLER_MONTHS##*..}"
     local bands_json="" entry name min max entries
@@ -132,7 +135,7 @@ render_crawler_config() {
   "tier": "gc",
   "max_unvalidated": 4,
   "min_free_gb": 25,
-  "rclone": "rclone --config /etc/rlreplay/rclone.conf",
+  "rclone": "rclone --config /etc/rlreplay/rclone.conf --ignore-size --sftp-set-modtime=false --retries 1",
   "ssh": "ssh -i /etc/rlreplay/lab_key -o StrictHostKeyChecking=accept-new"
 }
 EOF

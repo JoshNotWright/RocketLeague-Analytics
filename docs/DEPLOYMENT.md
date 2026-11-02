@@ -87,6 +87,12 @@ present. Two things the mount must satisfy, both checked by `lab_setup.sh`:
 - it must be in `/etc/fstab` with `_netdev`, so it comes up at boot before the UI. The setup
   script adds `RequiresMountsFor=` to the UI service for the same reason.
 
+- SMB reports odd sizes for a moment after a write and refuses to recreate a file it has just
+  deleted. The box's rclone therefore runs with `--ignore-size --sftp-set-modtime=false`
+  (set in `render_crawler_config`); integrity comes from the validator's sha256 of every file,
+  not from rclone's size check. If pushes still fail with "sizes differ" or "permission denied",
+  add `actimeo=0` to the mount options.
+
 Throughput is not a concern: a batch is pushed at tailnet speed and read once by the validator.
 Keep the NAS's own snapshots or checksumming on for that share; the lab does no mirroring of
 its own.

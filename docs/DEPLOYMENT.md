@@ -2,9 +2,9 @@
 
 Step-by-step, from empty accounts to a running crawl. Companion to
 [CLOUD_CRAWLER.md](CLOUD_CRAWLER.md) (how it works) and
-[HANDOFF_SEEDBOX_PIPELINE.md](HANDOFF_SEEDBOX_PIPELINE.md) (why). Written 2026-11-01 before
-the first real run: the scripts are tested against a local fake of the lab, not yet against
-Hetzner, so expect to fix small things on the first pass and keep this file honest as you go.
+[HANDOFF_SEEDBOX_PIPELINE.md](HANDOFF_SEEDBOX_PIPELINE.md) (why). The smoke test in section 3
+passed against the real lab and Hetzner on 2026-11-02 (900 replays, two batches validated, box
+deleted by the lab, fourteen minutes end to end). Keep this file honest as things change.
 
 The shape of it:
 
@@ -308,8 +308,8 @@ running box keeps the code it started with; stop and delete it, then create a ne
   `hcloud firewall add-rule` and comment out the `my_public_ip` line.
 - The UI's "run script" refuses a second operation while one is running, and trusts the
   tailnet entirely: anyone on your tailnet can press its buttons.
-- Nothing here has run against Hetzner yet. The first smoke test is the real test; fix what
-  breaks and update this file.
+- As of 2026-11-02 the smoke test has run for real; the full crawl and a Continue on a real
+  box after a long stop have not. Both use the same ledger path the smoke test did.
 
 ## 8. Secrets, restated
 

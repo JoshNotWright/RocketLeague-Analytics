@@ -66,20 +66,23 @@ box_tailscale_logout() {
     rm -f "$(box_ip_file)"
 }
 
-# ssh to a freshly created box by public IP, before it is on the tailnet.
+# ssh to a freshly created box by public IP, before it is on the tailnet. Hetzner reuses public
+# addresses and every box boots with fresh host keys, so known_hosts must not be consulted: a
+# remembered key for the same address would make every attempt fail silently in BatchMode.
 bootstrap_ssh() {
     local ip="$1"; shift
-    ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=15 "root@${ip}" "$@"
+    ssh -o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR         -o ConnectTimeout=15 "root@${ip}" "$@"
 }
 
 wait_for_ssh() {
     local ip="$1" tries="${2:-60}"
-    local i
+    local i err
     for ((i = 0; i < tries; i++)); do
         if bootstrap_ssh "$ip" true 2>/dev/null; then return 0; fi
         sleep 5
     done
-    die "ssh to $ip did not come up"
+    err="$(bootstrap_ssh "$ip" true 2>&1 | tail -n 3)"
+    die "ssh to $ip did not come up; last error: ${err:-none}"
 }
 
 server_exists() { hcloud server describe "$CRAWLER_NAME" >/dev/null 2>&1; }

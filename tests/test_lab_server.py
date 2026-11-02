@@ -70,7 +70,7 @@ class LabServerTests(unittest.TestCase):
         self.assertEqual([h["phase"] for h in o["boxes"][0]["history"]], ["crawling x"])
         self.call("GET", "/api/overview")  # same report again: no second history point
         self.assertEqual(len((self.root / "boxes" / "rl-crawler" / "history.jsonl").read_text().splitlines()), 1)
-        self.assertEqual(o["secrets"], {"HCLOUD_TOKEN": True, "BALLCHASING_API_KEY": False, "TS_AUTHKEY": False})
+        self.assertEqual(o["secrets"], {"HCLOUD_TOKEN": True, "BALLCHASING_API_KEY": False, "TS_AUTHKEY": False, "LAB_API_TOKEN": False})
         self.assertNotIn("secret-value", json.dumps(o))
         self.assertEqual(o["config"]["CRAWLER_NAME"], "rl-crawler")
         status, page = self.call("GET", "/")

@@ -111,6 +111,38 @@ The full walk-through, from accounts to the first run, is [DEPLOYMENT.md](DEPLOY
   `--force` deletes it anyway.
 - **Status**: the UI, or `crawler_status.sh` (reads the status file; `--live` asks the box).
 
+## API
+
+Everything the page does is available under `/api/v1` for scripts and agents, JSON in and
+out. `lab/client.py` is a standard-library client for it:
+
+```bash
+export RLLAB_URL=http://<lab tailnet ip>:8731      # and RLLAB_TOKEN if the lab sets LAB_API_TOKEN
+python -m lab.client --summary status
+python -m lab.client jobs
+python -m lab.client create --kind crawl --preset smoke --start
+python -m lab.client create --kind build --param bands=diamond --param months.first=2025-07 --param months.last=2025-07 --start
+python -m lab.client job <id> --summary        python -m lab.client stop <id>
+python -m lab.client log <op-id>               python -m lab.client endpoints
+```
+
+| method and path | what |
+| --- | --- |
+| `GET /api/v1/status` | everything the Overview shows |
+| `GET /api/v1/jobs`, `GET /api/v1/jobs/{id}` | job summaries; one job in full |
+| `POST /api/v1/jobs` | create `{name, kind, preset?, params?}` |
+| `POST /api/v1/jobs/{id}/{start,pause,resume,stop,force_stop,cancel,update}` | the job actions |
+| `POST /api/v1/estimate` | size, time and cost of a crawl `{params}` |
+| `GET /api/v1/windows`, `/batches`, `/ops`, `/ops/{id}/log?tail=` | the ledger, pushed batches, scripts and their output |
+| `POST /api/v1/ops` | `{action: image}` rebuilds the snapshot |
+| `GET /api/v1/openapi.json` | the list above as a minimal OpenAPI document |
+
+The page's own endpoints (`/api/overview`, `/api/jobs`, …) stay as they are and rely on the
+tailnet as the perimeter. If `LAB_API_TOKEN` is set in `lab.env`, `/api/v1` additionally
+requires `Authorization: Bearer <token>`; the page is unaffected. Generate one with
+`openssl rand -hex 24`, put it in `lab.env`, restart `rlreplay-lab-ui`, and set `RLLAB_TOKEN`
+wherever the client runs.
+
 ## Secrets
 
 `HCLOUD_TOKEN`, `BALLCHASING_API_KEY`, `TS_AUTHKEY` and the box-to-lab private key live in

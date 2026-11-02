@@ -11,11 +11,16 @@ lab-side scripts run in the background with their logs captured under <LAB_ROOT>
 never leave the env file: the page only sees whether each is set, and the settings editor can
 only change the infrastructure keys (box name, server type, location).
 
-There is no login: the server binds to the tailnet address from lab.env (LAB_UI_BIND) and the
-tailnet is the perimeter. Never bind it to a routable interface.
+There is no login for the page: the server binds to the tailnet address from lab.env
+(LAB_UI_BIND) and the tailnet is the perimeter. Never bind it to a routable interface.
+
+Automation uses the versioned API under /api/v1 (see API_PATHS and lab/client.py). If
+LAB_API_TOKEN is set in lab.env, every /api/v1 request must carry it as
+``Authorization: Bearer <token>``; the page's own /api endpoints stay tailnet-only.
 """
 from __future__ import annotations
 
+import hmac
 import json
 import os
 import re
@@ -33,7 +38,21 @@ from .jobs import ACTIVE_STATES, PRESETS, JobStore, build_args, clean_params, es
 
 REPO = Path(__file__).resolve().parent.parent
 STATIC = Path(__file__).resolve().parent / "static"
-SECRET_KEYS = ("HCLOUD_TOKEN", "BALLCHASING_API_KEY", "TS_AUTHKEY")
+SECRET_KEYS = ("HCLOUD_TOKEN", "BALLCHASING_API_KEY", "TS_AUTHKEY", "LAB_API_TOKEN")
+API_PATHS = {
+    "GET /api/v1/status": "everything the Overview shows: totals, windows, batches, boxes, jobs, ops",
+    "GET /api/v1/jobs": "job summaries with progress",
+    "GET /api/v1/jobs/{id}": "one job in full: params, runs, progress, box / build state, batches, ops",
+    "POST /api/v1/jobs": "create: {name, kind: crawl|build, preset?: smoke|full|build, params?}",
+    "POST /api/v1/jobs/{id}/{action}": "start | pause | resume | stop | force_stop | cancel | update {name?, params?, note?}",
+    "POST /api/v1/estimate": "{params} for a crawl job -> windows, max replays, hours, cost",
+    "GET /api/v1/windows": "the ledger per playlist, band and month",
+    "GET /api/v1/batches": "pushed batches and their validation state",
+    "GET /api/v1/ops": "scripts launched from the lab, newest last",
+    "GET /api/v1/ops/{id}/log?tail=200": "a script's output",
+    "POST /api/v1/ops": "{action: image} rebuilds the crawler snapshot",
+    "GET /api/v1/openapi.json": "this list, as a minimal OpenAPI document",
+}
 EDITABLE_KEYS = ("CRAWLER_NAME", "CRAWLER_TYPE", "CRAWLER_LOCATION")
 SHOWN_KEYS = EDITABLE_KEYS + ("LAB_ROOT", "LAB_USER", "LAB_TS_HOST", "LAB_REPO", "HCLOUD_SSH_KEY")
 SCRIPTS = {"up": "crawler_up.sh", "down": "crawler_down.sh", "image": "crawler_image.sh", "build": "lab_build.sh"}
@@ -553,6 +572,57 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _authorized(self) -> bool:
+        """/api/v1 needs the bearer token when LAB_API_TOKEN is set; otherwise the tailnet is the perimeter."""
+        token = self.lab.env.get("LAB_API_TOKEN", "")
+        if not token:
+            return True
+        header = self.headers.get("Authorization", "")
+        given = header[7:].strip() if header.lower().startswith("bearer ") else self.headers.get("X-Lab-Token", "")
+        return bool(given) and hmac.compare_digest(given, token)
+
+    def _v1_get(self, path: str, query: dict):
+        parts = [p for p in path.split("/") if p][2:]   # after api, v1
+        if parts == ["status"]:
+            return self.lab.overview()
+        if parts == ["jobs"]:
+            return {"jobs": self.lab.overview()["jobs"]}
+        if len(parts) == 2 and parts[0] == "jobs":
+            return self.lab.job_detail(parts[1])
+        if parts == ["windows"]:
+            return {"windows": self.lab.inventory.windows()}
+        if parts == ["batches"]:
+            return {"batches": self.lab.batches()}
+        if parts == ["ops"]:
+            return {"ops": self.lab._public_ops(limit=50)}
+        if len(parts) == 3 and parts[0] == "ops" and parts[2] == "log":
+            return {"op": parts[1], "log": self.lab.op_log(parts[1], int(query.get("tail", ["200"])[0]))}
+        if parts == ["openapi.json"]:
+            paths = {}
+            for key, desc in API_PATHS.items():
+                method, route = key.split(" ", 1)
+                paths.setdefault(route.split("?")[0], {})[method.lower()] = {"summary": desc}
+            return {"openapi": "3.0.0", "info": {"title": "rlreplay lab", "version": "1"}, "paths": paths,
+                    "components": {"securitySchemes": {"bearer": {"type": "http", "scheme": "bearer"}}}}
+        raise LookupError(path)
+
+    def _v1_post(self, path: str, payload: dict):
+        parts = [p for p in path.split("/") if p][2:]
+        if parts == ["jobs"]:
+            return self.lab.job_action({**payload, "action": "create"})
+        if len(parts) == 3 and parts[0] == "jobs":
+            action = parts[2].replace("-", "_")
+            if action not in ("start", "pause", "resume", "stop", "force_stop", "cancel", "update"):
+                raise ValueError(f"unknown job action {parts[2]}")
+            return self.lab.job_action({**payload, "action": action, "id": parts[1]})
+        if parts == ["estimate"]:
+            return self.lab.job_action({"action": "estimate", "params": payload.get("params") or payload})
+        if parts == ["ops"]:
+            if payload.get("action") != "image":
+                raise ValueError("the only op you can launch here is image; jobs do the rest")
+            return self.lab.run_script("image", payload.get("args", []))
+        raise LookupError(path)
+
     def _read_json(self) -> dict:
         length = int(self.headers.get("Content-Length") or 0)
         if length > 1 << 20:
@@ -573,6 +643,14 @@ class Handler(BaseHTTPRequestHandler):
                 self.send_header("Content-Length", str(len(body)))
                 self.end_headers()
                 self.wfile.write(body)
+            elif url.path.startswith("/api/v1/"):
+                if not self._authorized():
+                    self._json(401, {"error": "bearer token required (LAB_API_TOKEN is set on the lab)"})
+                    return
+                try:
+                    self._json(200, self._v1_get(url.path, parse_qs(url.query)))
+                except LookupError:
+                    self._json(404, {"error": "no such endpoint", "endpoints": list(API_PATHS)})
             elif url.path == "/api/overview":
                 self._json(200, self.lab.overview())
             elif url.path == "/api/job":
@@ -590,6 +668,16 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         url = urlsplit(self.path)
         try:
+            if url.path.startswith("/api/v1/"):
+                if not self._authorized():
+                    self._json(401, {"error": "bearer token required (LAB_API_TOKEN is set on the lab)"})
+                    return
+                payload = self._read_json()
+                try:
+                    self._json(200, self._v1_post(url.path, payload))
+                except LookupError:
+                    self._json(404, {"error": "no such endpoint", "endpoints": list(API_PATHS)})
+                return
             payload = self._read_json()
             if url.path == "/api/control":
                 self._json(200, self.lab.set_control(payload.get("box", ""), payload.get("command", "")))

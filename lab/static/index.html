@@ -26,6 +26,7 @@
     --track: #232a33; --shadow: none; --band-1: #6f95ff; --band-2: #f0a24a; --band-3: #2fc1b6; --band-4: #b38cf0; --band-5: #e07bb0;
   }
   * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
   html, body { margin: 0; height: 100%; }
   body { background: var(--bg); color: var(--ink); font: 14px/1.5 var(--sans); -webkit-font-smoothing: antialiased; }
   a { color: var(--accent); text-decoration: none; }
@@ -105,6 +106,9 @@
   .job.active { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
   .job .name { font-size: 15px; font-weight: 650; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; } .job .meta { color: var(--ink-2); font-size: 12px; margin-top: 2px; } .job .prog { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; font-size: 12px; color: var(--ink-2); } .job .prog .progress { margin: 0; }
   .runs li { display: grid; grid-template-columns: auto auto 1fr auto; gap: 12px; align-items: center; padding: 8px 10px; border-radius: 8px; cursor: pointer; font-size: 13px; } .runs li:hover { background: var(--surface-2); } .runs { list-style: none; padding: 0; margin: 0; }
+  .kind { font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-3); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; }
+  .tbl { display: inline-flex; gap: 4px; } .tbl i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; background: var(--track); } .tbl i.done { background: var(--good); } .tbl i.building { background: var(--accent); animation: pulse 1.5s infinite; } .tbl i.failed { background: var(--bad); } .tbl i.current { background: var(--good); opacity: .45; }
+  .segmented { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; } .segmented button { border: 0; border-radius: 0; padding: 7px 14px; } .segmented button.on { background: var(--accent); color: var(--accent-ink); }
   .alert { padding: 12px 14px; border-radius: 10px; border: 1px solid var(--warn); background: var(--warn-soft); color: var(--ink); margin-bottom: 18px; font-size: 13px; } .alert.bad { border-color: var(--bad); background: var(--bad-soft); } .alert b { display: block; margin-bottom: 2px; }
 </style>
 </head>
@@ -141,12 +145,14 @@
 
     <!-- JOBS -->
     <section class="page" id="page-jobs">
-      <div class="page-head"><div><h1>Jobs</h1><p>A job is what to crawl: a playlist, rank bands, a range of months and a cap. Start one and a box is created for it; stop it and the box is pushed, validated and deleted. A stopped job continues from the ledger on a new box.</p></div><div class="actions"><button class="primary" onclick="toggleNew(true)">New job</button></div></div>
+      <div class="page-head"><div><h1>Jobs</h1><p>Two kinds of job. A <b>crawl</b> fetches replays on a Hetzner box: start one and a box is created for it, stop it and the box is pushed, validated and deleted, continue it and a new box resumes from the ledger. A <b>build</b> runs on the lab and turns the archive into the model tables, window by window, only for what is new.</p></div><div class="actions"><button class="primary" onclick="toggleNew(true)">New job</button></div></div>
       <div class="card" id="newjob" hidden>
         <h2>New job</h2>
-        <div class="presets"><span class="muted" style="align-self:center;font-size:12px">Start from:</span><button type="button" onclick="applyPreset('smoke')">Smoke test · 1 month, 300 per window</button><button type="button" onclick="applyPreset('full')">Full crawl · every month, no cap</button></div>
+        <div class="field" style="border-bottom:0;padding-top:0"><span class="lbl">Kind</span><div><div class="segmented" id="j-kind"><button type="button" class="on" data-kind="crawl" onclick="setKind('crawl')">Crawl replays</button><button type="button" data-kind="build" onclick="setKind('build')">Build tables</button></div></div><div class="help" id="j-kind-help">A crawl fetches and decodes replays on a Hetzner box and ships them to the archive.</div></div>
+        <div class="presets" id="j-presets-crawl"><span class="muted" style="align-self:center;font-size:12px">Start from:</span><button type="button" onclick="applyPreset('smoke')">Smoke test · 1 month, 300 per window</button><button type="button" onclick="applyPreset('full')">Full crawl · every month, no cap</button></div>
         <form id="jobform" onsubmit="createJob(event, false)">
           <div class="field"><label for="j-name">Name</label><input id="j-name" placeholder="Smoke test" required maxlength="60"><div class="help">Shown everywhere this job appears.</div></div>
+          <div id="j-crawl-fields">
           <div class="field"><label for="j-playlist">Playlist</label><input id="j-playlist" value="ranked-doubles"><div class="help">A ballchasing playlist id, such as ranked-doubles or ranked-standard.</div></div>
           <div class="field"><span class="lbl">Rank bands</span><div><div class="checks" id="j-bands"><label><input type="checkbox" value="platinum">Platinum</label><label><input type="checkbox" value="diamond" checked>Diamond</label><label><input type="checkbox" value="champion" checked>Champion</label><label><input type="checkbox" value="gc" checked>Grand Champion</label><label><input type="checkbox" value="ssl">SSL</label></div><input id="j-bands-custom" placeholder="or custom: name:min-rank:max-rank, …" style="margin-top:8px"></div><div class="help">Each band is crawled separately and stored under its own folder. The custom field, if filled, replaces the boxes above.</div></div>
           <div class="field"><span class="lbl">Months</span><div class="inline"><input id="j-first" placeholder="2025-07" style="max-width:120px"><span class="muted">to</span><input id="j-last" placeholder="2026-10" style="max-width:120px"></div><div class="help">Inclusive, by the month a replay was played. One window per band per month; months first, so every band advances together.</div></div>
@@ -154,6 +160,13 @@
           <div class="field"><label for="j-batch">Batch size</label><input id="j-batch" value="20000" inputmode="numeric"><div class="help">Replays per pushed batch. 20,000 is about 28 GB on the box; use 500 for a smoke test so a batch validates within minutes.</div></div>
           <div class="field"><label for="j-type">Server</label><div class="inline"><select id="j-type" style="width:auto;flex:1"><option value="cpx22">cpx22 · 2 vCPU, 80 GB · about $0.03/h</option><option value="cpx32" selected>cpx32 · 4 vCPU, 160 GB · about $0.06/h</option><option value="cpx42">cpx42 · 8 vCPU, 240 GB · about $0.13/h</option></select><select id="j-location" style="width:auto"><option value="fsn1">Falkenstein</option><option value="nbg1">Nuremberg</option><option value="hel1">Helsinki</option><option value="ash">Ashburn</option><option value="hil">Hillsboro</option></select><input id="j-workers" value="4" style="max-width:70px" inputmode="numeric" data-tip="download workers"></div><div class="help">cpx32 decodes far faster than a GC key can download, so it never falls behind. The last field is the number of download workers; 4 suits a GC key.</div></div>
           <div class="estimate" id="j-estimate"></div>
+          </div>
+          <div id="j-build-fields" hidden>
+            <div class="field"><span class="lbl">Tables</span><div class="checks" id="b-tables"><label><input type="checkbox" value="frame" checked>Frame features</label><label><input type="checkbox" value="touches" checked>Touches</label><label><input type="checkbox" value="decisions" checked>Decisions</label><label><input type="checkbox" value="table" checked>Player-games</label></div><div class="help">Frame features and touches feed xG, value and the references; decisions feed the policy; player-games is the ballchasing join table from the ledger. Each is one parquet per band and month under features/.</div></div>
+            <div class="field"><label for="b-horizon">Decision horizon</label><div class="inline"><input id="b-horizon" value="2.5" style="max-width:90px" inputmode="decimal"><span class="muted">seconds, sampled at</span><input id="b-hz" value="5" style="max-width:70px" inputmode="decimal"><span class="muted">Hz</span></div><div class="help">How far ahead a decision point's outcome is judged, and how often decision points are sampled. 2.5 s at 5 Hz is what the current policy was fit on.</div></div>
+            <div class="field"><span class="lbl">Scope</span><div class="inline"><input id="b-playlist" placeholder="every playlist" style="max-width:170px"><input id="b-bands" placeholder="every band, or diamond,gc" style="max-width:220px"><input id="b-first" placeholder="first month" style="max-width:110px"><span class="muted">to</span><input id="b-last" placeholder="last month" style="max-width:110px"></div><div class="help">Leave empty to build every window in the archive. Only windows with new replays since the last build are rebuilt, and inside a window only the new replays are parsed.</div></div>
+            <div class="field"><span class="lbl">Options</span><div class="inline"><label class="inline" style="gap:6px"><input type="checkbox" id="b-force" style="width:auto">rebuild everything in scope, discarding the caches</label><span class="muted" style="margin-left:12px">workers</span><input id="b-workers" placeholder="all cores" style="max-width:90px" inputmode="numeric"></div><div class="help">Force is for after a change to the extractors. Workers caps the parallel parsers on the lab.</div></div>
+          </div>
           <div class="actions"><button class="primary" type="submit">Create job</button><button type="button" onclick="createJob(event, true)">Create and start</button><button type="button" onclick="toggleNew(false)">Cancel</button><span class="muted" id="j-status"></span></div>
         </form>
       </div>
@@ -166,10 +179,11 @@
       <div id="jb-alert"></div>
       <div class="tiles" id="jb-tiles" style="margin-bottom:18px"></div>
       <div id="jb-box"></div>
-      <div class="card"><h2>Windows <span class="hint">replays in the lab ledger per band and month; ✓ when the window is done, a pulse where the box is now</span></h2><div id="jb-windows" style="max-height:420px;overflow:auto"></div></div>
+      <div id="jb-build" hidden><div class="card"><h2>Windows <span class="hint">one row per band and month in scope; a square per table: grey pending, blue building, green done, red failed</span></h2><div id="jb-build-windows" style="max-height:420px;overflow:auto"></div></div></div>
+      <div id="jb-crawl"><div class="card"><h2>Windows <span class="hint">replays in the lab ledger per band and month; ✓ when the window is done, a pulse where the box is now</span></h2><div id="jb-windows" style="max-height:420px;overflow:auto"></div></div></div>
       <div class="grid2">
         <div class="card"><h2>Parameters</h2><div class="kv" id="jb-params"></div></div>
-        <div class="card"><h2>Batches from this job</h2><div id="jb-batches"></div></div>
+        <div class="card" id="jb-batches-card"><h2>Batches from this job</h2><div id="jb-batches"></div></div>
       </div>
       <div class="card"><h2>Runs <span class="hint">each start, stop or finish of this job; click one for its log</span></h2><ul class="runs" id="jb-runs"></ul><pre class="log" id="jb-log" hidden></pre></div>
     </section>
@@ -215,7 +229,7 @@
         <div>
           <div class="card"><h2>Secrets</h2><div id="secrets" style="display:grid;gap:8px"></div><p class="muted" style="font-size:12px;margin:12px 0 0">These live only in <span class="mono">/etc/rlreplay/lab.env</span> on the lab. The page can tell whether each is set, never what it is. A box receives them over SSH when it is created and never writes them anywhere a snapshot or log could keep.</p></div>
           <div class="card"><h2>Lab</h2><div class="kv" id="lab-facts"></div></div>
-          <div class="card"><h2>First run</h2><ol style="margin:0;padding-left:18px;color:var(--ink-2);font-size:13px;line-height:1.7"><li>Fill the three secrets in the env file.</li><li>Rebuild the image once.</li><li>On Jobs, create the <b>Smoke test</b> preset and start it.</li><li>Watch its first batch validate, then stop it; the box is deleted for you.</li><li>Create the <b>Full crawl</b> and start it.</li></ol></div>
+          <div class="card"><h2>First run</h2><ol style="margin:0;padding-left:18px;color:var(--ink-2);font-size:13px;line-height:1.7"><li>Fill the three secrets in the env file.</li><li>Rebuild the image once.</li><li>On Jobs, create the <b>Smoke test</b> preset and start it.</li><li>Watch its first batch validate, then stop it; the box is deleted for you.</li><li>Create the <b>Full crawl</b> and start it.</li><li>When replays have landed, create a <b>Build tables</b> job; run it again whenever the archive has grown.</li></ol></div>
         </div>
       </div>
     </section>
@@ -238,7 +252,8 @@ const title = (s) => s ? s[0].toUpperCase() + s.slice(1) : s;
 const bandName = (b) => ({gc: "Grand Champion", ssl: "Supersonic Legend"}[b] || title(b));
 const STATE = {draft: ["muted", "Draft"], running: ["good", "Running"], paused: ["warn", "Paused"], stopping: ["warn", "Stopping"], finishing: ["warn", "Finishing"], stopped: ["muted", "Stopped"], complete: ["good", "Complete"], failed: ["bad", "Failed"]};
 const stateChip = (s) => { const [k, l] = STATE[s] || ["muted", s]; return `<span class="chip ${k}">${l}</span>`; };
-let state = null, openOp = null, page = "overview", jobId = null, jobData = null, openRun = null, jobTimer = null;
+let state = null, openOp = null, page = "overview", jobId = null, jobData = null, openRun = null, jobTimer = null, newKind = "crawl";
+const TABLE_NAMES = {frame: "frame features", touches: "touches", decisions: "decisions", table: "player-games"};
 
 // ---- theme, routing, toast, tooltip ----
 function toggleTheme() { const r = document.documentElement, cur = r.dataset.theme || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"); r.dataset.theme = cur === "dark" ? "light" : "dark"; try { localStorage.setItem("lab-theme", r.dataset.theme); } catch (e) {} }
@@ -276,7 +291,17 @@ function phaseSentence(b) {
   if (p === "stopped") return ["Box service exited", "The crawler service on the box has stopped. Stop the job to delete the box, then continue it."];
   return [title(p), ""];
 }
+function buildSentence(j) {
+  const p = j.progress || {};
+  if (j.state === "running") return [p.current ? `Building ${esc(p.current.replace(/^(\w+) /, (m, t) => (TABLE_NAMES[t] || t) + " for ")).replace(/\//g, " · ")}` : "Starting", `${p.done ?? 0} of ${p.total ?? "?"} table builds done${p.errors ? ` · ${p.errors} failed` : ""}`];
+  if (j.state === "stopping") return ["Stopping", "The current table finishes, then the build exits."];
+  if (j.state === "stopped") return ["Stopped", "Start again to continue; finished tables are kept, only what is missing or new is built."];
+  if (j.state === "complete") return ["Complete", `${p.total ?? 0} table builds, every window in scope up to date.`];
+  if (j.state === "failed") return ["Needs attention", (j.last_run || j.runs?.at?.(-1))?.outcome || "The build reported failures; see the windows and the log."];
+  return ["Draft", "Not started yet."];
+}
 function jobSentence(j, box) {
+  if (j.kind === "build") return buildSentence(j);
   const b = box && box.status && box.status.job === j.id ? box : null;
   if (j.state === "running" && b) return phaseSentence(b);
   if (j.state === "running") return ["Starting a box", "Creating the server, handing it the keys, joining the tailnet. The first status arrives a few minutes after that."];
@@ -304,7 +329,8 @@ function render(o) {
   $("#nav-archive").textContent = n(o.totals.replays); $("#nav-transfers").textContent = o.batches.length ? `${pending.length || ""}${bad.length ? " · " + bad.length + " bad" : ""}` : ""; $("#nav-jobs").textContent = active ? "1 active" : o.jobs.length ? `${o.jobs.length}` : "";
   if (o.disk) { $("#side-disk").textContent = gb(o.disk.free) + " free"; $("#side-disk-bar").style.width = (100 * (1 - o.disk.free / o.disk.total)).toFixed(1) + "%"; }
   const kind = active ? (box?.status && box.status.job === active.id && box.status_age_s < 300 ? phaseKind(box.status) : active.state === "paused" ? "warn" : "muted") : "off";
-  $("#side-box").innerHTML = `<span class="pulse ${kind}"></span> ${active ? esc(active.name) + " · " + esc(active.state) : "no job running"}`;
+  const buildJob = o.jobs.find(j => j.id === o.active_build);
+  $("#side-box").innerHTML = `<span class="pulse ${kind}"></span> ${active ? esc(active.name) + " · " + esc(active.state) : "no crawl running"}${buildJob ? `<br><span class="pulse muted"></span> ${esc(buildJob.name)} · ${buildJob.progress.done}/${buildJob.progress.total || "?"}` : ""}`;
   $("#brand-sub").textContent = `${n(o.totals.replays)} replays`;
 
   // overview hero
@@ -324,6 +350,8 @@ function render(o) {
   if (!o.jobs.length) guide.push("Rebuild the image once (Settings), then create the Smoke test job and start it.");
   if (bad.length) guide.push(`${bad.length} batch${bad.length > 1 ? "es" : ""} failed validation. The box retries on its own; Transfers has the reason.`);
   const failed = o.jobs.find(j => j.state === "failed"); if (failed) guide.push(`'${failed.name}' needs attention: ${failed.last_run?.outcome || "its last script failed"}.`);
+  const build = o.jobs.find(j => j.id === o.active_build); if (build) guide.push(`Build '${build.name}' is running on the lab: ${build.progress.done} of ${build.progress.total || "?"} table builds done.`);
+  else if (o.totals.replays > 0 && !o.jobs.some(j => j.kind === "build")) guide.push("The archive has replays but no build job yet: create one (New job → Build tables) to produce the model tables.");
   $("#ov-guide").hidden = !guide.length; $("#ov-guide").innerHTML = `<h2>Suggested next steps</h2><ol style="margin:0;padding-left:18px;color:var(--ink-2);line-height:1.8">${guide.map(g => `<li>${esc(g)}</li>`).join("")}</ol>`;
 
   // jobs list
@@ -348,23 +376,37 @@ function render(o) {
   if (!document.activeElement?.closest?.("#config")) for (const k of ["CRAWLER_NAME", "CRAWLER_TYPE", "CRAWLER_LOCATION"]) { const el = $("#f-" + k); if (el) { if (el.tagName === "SELECT" && o.config[k] && ![...el.options].some(x => x.value === o.config[k])) el.add(new Option(o.config[k], o.config[k])); el.value = o.config[k]; } }
   $("#secrets").innerHTML = Object.entries(o.secrets).map(([k, v]) => `<div style="display:flex;justify-content:space-between;align-items:center"><span class="mono">${k}</span><span class="chip ${v ? "good" : "bad"}">${v ? "set" : "missing"}</span></div>`).join("");
   $("#lab-facts").innerHTML = [["archive root", o.root], ["push user", o.config.LAB_USER], ["tailnet address", o.config.LAB_TS_HOST], ["Hetzner ssh key", o.config.HCLOUD_SSH_KEY], ["repository", o.config.LAB_REPO]].map(([k, v]) => `<span class="k">${k}</span><span class="mono">${esc(v)}</span>`).join("");
-  $("#ops").innerHTML = o.ops.slice().reverse().map(op => `<li class="${op.id === openOp ? "open" : ""}" onclick="showLog('${op.id}')"><span class="chip ${op.returncode == null ? "warn" : op.returncode === 0 ? "good" : "bad"}">${op.returncode == null ? "running" : op.returncode === 0 ? "done" : "failed"}</span><span>${esc({up: "Start box", down: "Stop box", image: "Rebuild image"}[op.action] || op.action)} <span class="muted mono">${esc(op.args.join(" "))}</span>${op.job ? ` <a href="#job/${esc(op.job)}" class="muted" onclick="event.stopPropagation()">${esc(jobName(op.job))}</a>` : ""}</span><span class="muted">${when(op.started)}</span></li>`).join("") || `<li class="muted" style="cursor:default;grid-template-columns:1fr">No operations run from here yet.</li>`;
+  $("#ops").innerHTML = o.ops.slice().reverse().map(op => `<li class="${op.id === openOp ? "open" : ""}" onclick="showLog('${op.id}')"><span class="chip ${op.returncode == null ? "warn" : op.returncode === 0 ? "good" : "bad"}">${op.returncode == null ? "running" : op.returncode === 0 ? "done" : "failed"}</span><span>${esc({up: "Start box", down: "Stop box", image: "Rebuild image", build: "Build tables"}[op.action] || op.action)} <span class="muted mono">${esc(op.args.join(" "))}</span>${op.job ? ` <a href="#job/${esc(op.job)}" class="muted" onclick="event.stopPropagation()">${esc(jobName(op.job))}</a>` : ""}</span><span class="muted">${when(op.started)}</span></li>`).join("") || `<li class="muted" style="cursor:default;grid-template-columns:1fr">No operations run from here yet.</li>`;
   if (openOp) showLog(openOp, true);
   if (page === "job" && jobData) renderJob(jobData);
 }
 const tile = (k, v, s) => `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s}</div></div>`;
 const batchChip = (b) => b.validated ? `<span class="chip good" data-tip="validated ${esc(b.validated)}">✓ validated</span>` : b.problems ? `<span class="chip bad">✕ failed</span> <details><summary>why</summary><pre>${esc(b.problems.map(p => JSON.stringify(p)).join("\n"))}</pre></details>` : `<span class="chip warn">… pending</span>`;
-function progressLine(j) { const p = j.progress; const pct = (100 * p.fraction).toFixed(1); return `<div class="prog" style="margin-top:10px;display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;font-size:12px;color:var(--ink-2)"><div class="progress ${j.state === "complete" ? "good" : ""}" style="margin:0"><i style="width:${pct}%"></i></div><span>${p.target ? `${n(Math.min(p.replays, p.target))} of ${n(p.target)} replays` : `${p.windows_done} of ${p.estimate.windows} windows done · ${n(p.replays)} replays`}</span></div>`; }
+function progressLine(j) { const p = j.progress; const pct = (100 * p.fraction).toFixed(1); const label = j.kind === "build" ? (p.total ? `${p.done} of ${p.total} table builds` : j.state === "complete" ? "up to date" : "not started") : p.target ? `${n(Math.min(p.replays, p.target))} of ${n(p.target)} replays` : `${p.windows_done} of ${p.estimate.windows} windows done · ${n(p.replays)} replays`; return `<div class="prog" style="margin-top:10px;display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;font-size:12px;color:var(--ink-2)"><div class="progress ${j.state === "complete" ? "good" : ""}" style="margin:0"><i style="width:${pct}%"></i></div><span>${label}</span></div>`; }
+function buildMeta(p) { return `${p.tables.map(t => TABLE_NAMES[t] || t).join(", ")} · ${p.playlist || "every playlist"} · ${p.bands ? p.bands.split(",").map(bandName).join(", ") : "every band"} · ${p.months ? `${monthLabel(p.months.first)}${p.months.first !== p.months.last ? " to " + monthLabel(p.months.last) : ""}` : "every month"}${p.force ? " · force" : ""}`; }
 function jobCard(j, o) {
-  const p = j.params, e = j.progress.estimate;
+  const p = j.params;
+  if (j.kind === "build") return `<div class="job ${j.id === o.active_build ? "active" : ""}" onclick="location.hash='job/${esc(j.id)}'">
+    <div><div class="name"><span class="kind">build</span>${esc(j.name)} ${stateChip(j.state)}</div><div class="meta">${esc(buildMeta(p))}${j.last_run ? ` · last run ${when(j.last_run.started)}` : ""}</div></div>
+    <div class="actions" onclick="event.stopPropagation()">${jobButtons(j, false)}</div>
+    ${progressLine(j)}</div>`;
+  const e = j.progress.estimate;
   const bands = p.bands.split(",").map(b => bandName(b.split(":")[0])).join(", ");
   return `<div class="job ${j.id === o.active_job ? "active" : ""}" onclick="location.hash='job/${esc(j.id)}'">
-    <div><div class="name">${esc(j.name)} ${stateChip(j.state)}</div><div class="meta">${esc(p.playlist)} · ${esc(bands)} · ${monthLabel(p.months.first)}${p.months.first !== p.months.last ? " to " + monthLabel(p.months.last) : ""} · ${p.per_window ? n(p.per_window) + " per window" : "no cap"} · ${e.windows} windows${j.last_run ? ` · last ${esc(j.last_run.action === "up" ? "started" : "stopped")} ${when(j.last_run.started)}` : ""}</div></div>
+    <div><div class="name"><span class="kind">crawl</span>${esc(j.name)} ${stateChip(j.state)}</div><div class="meta">${esc(p.playlist)} · ${esc(bands)} · ${monthLabel(p.months.first)}${p.months.first !== p.months.last ? " to " + monthLabel(p.months.last) : ""} · ${p.per_window ? n(p.per_window) + " per window" : "no cap"} · ${e.windows} windows${j.last_run ? ` · last ${esc(j.last_run.action === "up" ? "started" : "stopped")} ${when(j.last_run.started)}` : ""}</div></div>
     <div class="actions" onclick="event.stopPropagation()">${jobButtons(j, false)}</div>
     ${progressLine(j)}</div>`;
 }
 function jobButtons(j, compact) {
   const id = esc(j.id), b = [];
+  if (j.kind === "build") {
+    if (["draft", "stopped", "failed", "complete"].includes(j.state)) b.push(`<button class="${j.state === "complete" ? "" : "primary"}" onclick="jobAct('${id}','start')">${j.state === "draft" ? "Start" : j.state === "complete" ? "Run again" : "Continue"}</button>`);
+    if (j.state === "running") b.push(`<button class="danger" onclick="jobAct('${id}','stop','stop the build after the table it is on; finished tables are kept')">Stop</button>`);
+    if (j.state === "stopping") b.push(`<button disabled>Stopping…</button>`);
+    if (!compact && ["draft", "stopped", "complete", "failed"].includes(j.state)) b.push(`<button class="small" onclick="jobAct('${id}','cancel','remove this job (the tables it built stay under features/)')">${j.state === "complete" ? "Remove" : "Cancel"}</button>`);
+    if (compact) b.push(`<button onclick="location.hash='job/${id}'">Open job</button>`);
+    return b.join("");
+  }
   if (j.state === "draft") b.push(`<button class="primary" onclick="jobAct('${id}','start')">Start</button>`);
   if (j.state === "stopped" || j.state === "failed") b.push(`<button class="primary" onclick="jobAct('${id}','start')">Continue</button>`);
   if (j.state === "complete") b.push(`<button onclick="jobAct('${id}','start')" data-tip="start a box for this job again; with every window done it only confirms the ledger and is deleted, unless the cap was raised">Continue</button>`);
@@ -380,9 +422,33 @@ function jobButtons(j, compact) {
 
 // ---- job page ----
 async function loadJob() { if (!jobId) return; try { jobData = await api(`/api/job?id=${encodeURIComponent(jobId)}`); renderJob(jobData); } catch (e) { $("#jb-name").textContent = jobId; $("#jb-sub").textContent = e.message; } }
+function renderBuildJob(d) {
+  const j = d.job, b = d.build || {}, p = d.progress, summary = {...j, progress: p, last_run: j.runs.at(-1)};
+  $("#jb-name").textContent = j.name; $("#jb-state").innerHTML = `<span class="kind">build</span> ${stateChip(j.state)}`;
+  const [headline, sub] = buildSentence(summary);
+  $("#jb-sub").innerHTML = `<b>${esc(headline)}</b> · ${esc(sub)}`;
+  $("#jb-actions").innerHTML = jobButtons(summary, false);
+  const lastRun = j.runs.at(-1), alerts = [];
+  if (j.state === "failed" && lastRun) alerts.push(["bad", "The build reported failures", `${esc(lastRun.outcome || "")}. Red squares below name the table and window; the run's log has the error.`]);
+  if (j.state === "running" && b.updated && (Date.now() - Date.parse(b.updated)) / 1000 > 1800) alerts.push(["warn", `No progress report for ${ago(Math.round((Date.now() - Date.parse(b.updated)) / 1000))}`, "A large window can take a while; the log shows whether the parser is still printing."]);
+  $("#jb-alert").innerHTML = alerts.map(([k, t, s]) => `<div class="alert ${k}"><b>${t}</b>${s}</div>`).join("");
+  const elapsed = b.started ? (Date.parse(b.updated || b.started) - Date.parse(b.started)) / 1000 : null;
+  $("#jb-tiles").innerHTML = tile("Progress", b.total ? `${(100 * (b.done || 0) / b.total).toFixed(0)}<small>%</small>` : (j.state === "complete" ? "100<small>%</small>" : "—"), `<div class="progress ${j.state === "complete" ? "good" : ""}"><i style="width:${(100 * p.fraction).toFixed(1)}%"></i></div>${b.total ? `${b.done} of ${b.total} table builds` : "nothing to do yet"}`) +
+    tile("Now building", b.current ? esc((b.current.split(" ")[0] in TABLE_NAMES ? TABLE_NAMES[b.current.split(" ")[0]] : b.current.split(" ")[0])) : "—", b.current ? esc(b.current.split(" ").slice(1).join(" ").replace(/\//g, " · ")) : j.state === "running" ? "planning the windows" : "idle") +
+    tile("Windows in scope", n((b.windows || []).length), `${(b.windows || []).filter(w => Object.values(w.tables).every(s => s === "done" || s === "current")).length} fully up to date`) +
+    tile("Failed steps", n((b.errors || []).length), (b.errors || []).length ? esc(b.errors[0].step) : elapsed != null ? `running ${hours(elapsed / 3600)}` : "none");
+  $("#jb-box").innerHTML = ""; $("#jb-crawl").hidden = true; $("#jb-build").hidden = false; $("#jb-batches-card").hidden = true;
+  const rows = b.windows || [];
+  $("#jb-build-windows").innerHTML = rows.length ? `<table><thead><tr><th>window</th><th class="num">replays</th>${(b.tables || j.params.tables).map(t => `<th>${TABLE_NAMES[t] || t}</th>`).join("")}</tr></thead><tbody>${rows.map(w => `<tr><td class="mono">${esc(w.key.split("/").slice(1).join(" · "))}</td><td class="num">${n(w.replays)}</td>${(b.tables || j.params.tables).map(t => { const st = w.tables[t] || "pending"; return `<td><span class="chip ${st === "done" || st === "current" ? "good" : st === "building" ? "" : st === "failed" ? "bad" : "muted"}">${st === "current" ? "up to date" : st}</span></td>`; }).join("")}</tr>`).join("")}</tbody></table>` : `<div class="muted">${j.state === "draft" ? "The windows appear once the build starts." : "No decoded windows matched the scope."}</div>`;
+  $("#jb-params").innerHTML = [["tables", j.params.tables.map(t => TABLE_NAMES[t] || t).join(", ")], ["horizon", `${j.params.horizon} s at ${j.params.hz} Hz`], ["playlist", j.params.playlist || "every playlist"], ["bands", j.params.bands || "every band"], ["months", j.params.months ? `${j.params.months.first} to ${j.params.months.last}` : "every month"], ["force", j.params.force ? "yes" : "no"], ["workers", j.params.workers || "all cores"], ["created", when(j.created)], ["id", j.id]].map(([k, v]) => `<span class="k">${k}</span><span>${esc(v)}</span>`).join("");
+  $("#jb-runs").innerHTML = j.runs.length ? j.runs.slice().reverse().map(r => `<li class="${r.op === openRun ? "open" : ""}" onclick="showRunLog('${esc(r.op || "")}')"><span class="chip ${r.outcome == null ? "warn" : r.outcome === "ok" ? "good" : r.outcome === "stopped" ? "muted" : "bad"}">${r.outcome == null ? "running" : r.outcome === "ok" ? "ok" : r.outcome === "stopped" ? "stopped" : "failed"}</span><span>Build</span><span class="muted">${r.outcome && !["ok", "stopped"].includes(r.outcome) ? esc(r.outcome) : ""}</span><span class="muted">${when(r.started)}</span></li>`).join("") : `<li class="muted" style="cursor:default;grid-template-columns:1fr">Not started yet.</li>`;
+  if (openRun) showRunLog(openRun, true);
+}
 function renderJob(d) {
+  if (d.job.kind === "build") return renderBuildJob(d);
+  $("#jb-crawl").hidden = false; $("#jb-build").hidden = true; $("#jb-batches-card").hidden = false;
   const j = d.job, p = d.progress, box = d.box, summary = {...j, progress: p, last_run: j.runs.at(-1)};
-  $("#jb-name").textContent = j.name; $("#jb-state").innerHTML = stateChip(j.state);
+  $("#jb-name").textContent = j.name; $("#jb-state").innerHTML = `<span class="kind">crawl</span> ${stateChip(j.state)}`;
   const [headline, sub] = jobSentence(summary, box ? {...box} : d.box_any);
   $("#jb-sub").innerHTML = `<b>${esc(headline)}</b> · ${esc(sub)}`;
   $("#jb-actions").innerHTML = jobButtons(summary, false);
@@ -422,12 +488,28 @@ function boxCard(b) {
 }
 
 // ---- new job form ----
+function setKind(kind) {
+  newKind = kind; document.querySelectorAll("#j-kind button").forEach(b => b.classList.toggle("on", b.dataset.kind === kind));
+  $("#j-crawl-fields").hidden = kind !== "crawl"; $("#j-build-fields").hidden = kind !== "build"; $("#j-presets-crawl").hidden = kind !== "crawl";
+  $("#j-kind-help").textContent = kind === "crawl" ? "A crawl fetches and decodes replays on a Hetzner box and ships them to the archive." : "A build runs on the lab: it turns the archive's decoded replays into the model tables, only for windows with something new.";
+  const presetNames = Object.values(state?.presets || {}).map(p => p.name);
+  if (kind === "build" && (!$("#j-name").value || presetNames.includes($("#j-name").value))) $("#j-name").value = "Build tables";
+  if (kind === "crawl" && $("#j-name").value === "Build tables") $("#j-name").value = state?.presets?.smoke?.name || "";
+  if (kind === "crawl") estimateForm();
+}
 function toggleNew(show) { $("#newjob").hidden = !show; if (show) { if (!$("#j-first").value) { if (state) applyPreset("smoke"); else return; } $("#j-name").focus(); estimateForm(); } }
 function applyPreset(key) {
   const pr = state?.presets?.[key]; if (!pr) return; const p = pr.params;
+  if (pr.kind === "build") { setKind("build"); $("#j-name").value = pr.name; return; }
+  setKind("crawl");
   $("#j-name").value = pr.name; $("#j-playlist").value = p.playlist; $("#j-first").value = p.months.first; $("#j-last").value = p.months.last; $("#j-cap").value = p.per_window ?? ""; $("#j-batch").value = p.batch_size; $("#j-workers").value = p.workers; $("#j-type").value = p.server_type; $("#j-location").value = p.location;
   const names = p.bands.split(",").map(b => b.split(":")[0]); document.querySelectorAll("#j-bands input").forEach(i => i.checked = names.includes(i.value)); $("#j-bands-custom").value = names.every(nm => [...document.querySelectorAll("#j-bands input")].some(i => i.value === nm)) ? "" : p.bands;
   estimateForm();
+}
+function buildFormParams() {
+  return {tables: [...document.querySelectorAll("#b-tables input:checked")].map(i => i.value), horizon: $("#b-horizon").value.trim(), hz: $("#b-hz").value.trim(),
+    playlist: $("#b-playlist").value.trim(), bands: $("#b-bands").value.trim(), months: $("#b-first").value.trim() ? {first: $("#b-first").value.trim(), last: $("#b-last").value.trim() || $("#b-first").value.trim()} : null,
+    force: $("#b-force").checked, workers: $("#b-workers").value.trim() || null};
 }
 function formParams() {
   const custom = $("#j-bands-custom").value.trim();
@@ -438,10 +520,10 @@ let estTimer = null, estSeq = 0;
 function estimateForm() { clearTimeout(estTimer); estTimer = setTimeout(async () => { const seq = ++estSeq, p = formParams();
   if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(p.months.first) || !/^\d{4}-(0[1-9]|1[0-2])$/.test(p.months.last)) { $("#j-estimate").innerHTML = `<div style="grid-column:1/-1" class="muted">Fill in both months as yyyy-mm to see the estimate.</div>`; return; }
   try { const e = await api("/api/jobs", {action: "estimate", params: p}); if (seq !== estSeq) return; $("#j-estimate").innerHTML = [["windows", `${e.windows}`, `${e.bands} bands × ${e.months} months`], ["replays", e.max_replays ? `up to ${n(e.max_replays)}` : "open-ended", e.max_replays ? `about ${e.decoded_gb} GB decoded` : "until each listing is exhausted"], ["time", hours(e.hours), e.hours ? "at the GC rate" : `$${e.price_per_hour.toFixed(3)} per hour`], ["server cost", e.cost_usd != null ? `about $${e.cost_usd.toFixed(2)}` : "per hour", e.cost_usd != null ? "plus a few cents of snapshot" : "stop it when you have enough"]].map(([k, v, s]) => `<div><div class="k">${k}</div><div class="v">${v}</div><div class="k">${s}</div></div>`).join(""); } catch (e) { if (seq !== estSeq) return; $("#j-estimate").innerHTML = `<div style="grid-column:1/-1;color:var(--bad)">${esc(e.message)}</div>`; } }, 250); }
-document.addEventListener("input", (e) => { if (e.target.closest("#jobform")) estimateForm(); });
+document.addEventListener("input", (e) => { if (e.target.closest("#j-crawl-fields")) estimateForm(); });
 async function createJob(ev, start) {
   ev.preventDefault(); const name = $("#j-name").value.trim(); if (!name) return toast("Give the job a name", true);
-  try { const j = await api("/api/jobs", {action: "create", name, params: formParams()}); toggleNew(false); $("#jobform").reset(); $("#j-first").value = "";
+  try { const j = await api("/api/jobs", {action: "create", name, kind: newKind, params: newKind === "build" ? buildFormParams() : formParams()}); toggleNew(false); $("#jobform").reset(); $("#j-first").value = ""; setKind("crawl");
     if (start) { await api("/api/jobs", {action: "start", id: j.id}); toast(`'${j.name}' is starting`); } else toast(`'${j.name}' created`);
     location.hash = `job/${j.id}`; refresh(); } catch (e) { toast(e.message, true); }
 }
@@ -450,7 +532,8 @@ async function createJob(ev, start) {
 async function jobAct(id, action, confirmText) {
   if (confirmText && !confirm(`This will ${confirmText}. Continue?`)) return;
   try { const r = await api("/api/jobs", {action, id});
-    toast({start: "Starting: a box is being created for the job", pause: "Pausing after the current page", resume: "Resuming: the box picks it up within one page", stop: "Stopping: push, validate, delete", force_stop: "Force stop: deleting the box", cancel: "Job removed"}[action] || "done");
+    const isBuild = (state?.jobs || []).find(j => j.id === id)?.kind === "build";
+    toast(isBuild ? {start: "Build started on the lab", stop: "Stopping after the current table", cancel: "Job removed"}[action] || "done" : {start: "Starting: a box is being created for the job", pause: "Pausing after the current page", resume: "Resuming: the box picks it up within one page", stop: "Stopping: push, validate, delete", force_stop: "Force stop: deleting the box", cancel: "Job removed"}[action] || "done");
     if (action === "cancel") location.hash = "jobs"; else if (page !== "job") location.hash = `job/${id}`;
     refresh(); if (page === "job") loadJob(); } catch (e) { toast(e.message, true); }
 }

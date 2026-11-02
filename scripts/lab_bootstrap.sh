@@ -118,6 +118,17 @@ if [[ -z "${RL_BOOTSTRAP_REEXEC:-}" ]]; then
     exec bash "$DEST/scripts/lab_bootstrap.sh"
 fi
 
+# ---------------------------------------------------------------- venv for table building
+# Build jobs (lab/build.py) run rlreplay on the lab: polars, pyarrow, numpy, scikit-learn,
+# lightgbm. The UI and the validator stay standard-library and do not need it.
+say "python venv for building tables"
+if [[ ! -x "$DEST/.venv/bin/python" ]]; then
+    python3 -m venv "$DEST/.venv"
+fi
+"$DEST/.venv/bin/pip" install -q --upgrade pip
+"$DEST/.venv/bin/pip" install -q -r "$DEST/requirements.txt" -r "$DEST/requirements-v2.txt"
+printf '   %s\n' "$("$DEST/.venv/bin/python" -c 'import polars, lightgbm, numpy; print("polars", polars.__version__, "lightgbm", lightgbm.__version__, "numpy", numpy.__version__)')"
+
 # ---------------------------------------------------------------- lab_setup.sh
 say "lab setup (user $USER_NAME, tree $ROOT)"
 if [[ ! -d "$ROOT" ]]; then

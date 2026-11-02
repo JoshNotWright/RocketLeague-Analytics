@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -28,14 +29,14 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
-from .jobs import ACTIVE_STATES, PRESETS, JobStore, clean_params, estimate
+from .jobs import ACTIVE_STATES, PRESETS, JobStore, build_args, clean_params, estimate
 
 REPO = Path(__file__).resolve().parent.parent
 STATIC = Path(__file__).resolve().parent / "static"
 SECRET_KEYS = ("HCLOUD_TOKEN", "BALLCHASING_API_KEY", "TS_AUTHKEY")
 EDITABLE_KEYS = ("CRAWLER_NAME", "CRAWLER_TYPE", "CRAWLER_LOCATION")
 SHOWN_KEYS = EDITABLE_KEYS + ("LAB_ROOT", "LAB_USER", "LAB_TS_HOST", "LAB_REPO", "HCLOUD_SSH_KEY")
-SCRIPTS = {"up": "crawler_up.sh", "down": "crawler_down.sh", "image": "crawler_image.sh"}
+SCRIPTS = {"up": "crawler_up.sh", "down": "crawler_down.sh", "image": "crawler_image.sh", "build": "lab_build.sh"}
 
 
 def _bash() -> str:
@@ -263,10 +264,31 @@ class Lab:
             out.append({"name": name, "status": status, "control": control, "status_age_s": age, "history": history})
         return out
 
+    def _public_ops(self, job_id: str | None = None, limit: int = 20) -> list:
+        ops = [o for o in self.ops if job_id is None or o.get("job") == job_id]
+        return [{k: v for k, v in o.items() if not k.startswith("_")} for o in ops[-limit:]]
+
+    def build_progress(self, job_id: str) -> dict | None:
+        path = self.root / "builds" / f"{job_id}.json"
+        if not path.exists():
+            return None
+        try:
+            return json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return None
+
     def _job_summary(self, job: dict, windows: list) -> dict:
-        prog = self.jobs.progress(job, windows)
-        prog.pop("windows", None)
-        return {"id": job["id"], "name": job["name"], "state": job["state"], "params": job["params"],
+        if job.get("kind", "crawl") == "build":
+            b = self.build_progress(job["id"]) or {}
+            total, done = int(b.get("total") or 0), int(b.get("done") or 0)
+            prog = {"fraction": round(done / total, 4) if total else (1.0 if job["state"] == "complete" else 0.0),
+                    "done": done, "total": total, "current": b.get("current"), "phase": b.get("phase"),
+                    "errors": len(b.get("errors") or []), "windows": len(b.get("windows") or []),
+                    "updated": b.get("updated")}
+        else:
+            prog = self.jobs.progress(job, windows)
+            prog.pop("windows", None)
+        return {"id": job["id"], "name": job["name"], "kind": job.get("kind", "crawl"), "state": job["state"], "params": job["params"],
                 "created": job["created"], "updated": job["updated"], "note": job.get("note", ""),
                 "last_run": job["runs"][-1] if job["runs"] else None, "runs": len(job["runs"]), "progress": prog}
 
@@ -277,16 +299,18 @@ class Lab:
         boxes = self.boxes()
         self._reconcile(boxes)
         jobs = [self._job_summary(j, windows) for j in self.jobs.all()]
-        active = next((j for j in jobs if j["state"] in ACTIVE_STATES), None)
+        active = next((j for j in jobs if j["state"] in ACTIVE_STATES and j["kind"] == "crawl"), None)
         return {"now": _now(), "root": str(self.root), "box_name": self.box_name,
                 "disk": {"free": usage.free, "total": usage.total} if usage else None,
                 "totals": {"replays": sum(w["replays"] for w in windows), "decoded": sum(w["decoded"] for w in windows),
                            "bytes": sum(w["bytes"] for w in windows)},
                 "windows": windows, "batches": self.batches(), "boxes": boxes,
-                "jobs": jobs, "active_job": active["id"] if active else None, "presets": PRESETS,
+                "jobs": jobs, "active_job": active["id"] if active else None,
+                "active_build": next((j["id"] for j in jobs if j["kind"] == "build" and j["state"] in ACTIVE_STATES), None),
+                "presets": PRESETS,
                 "config": {k: self.env.get(k, "") for k in SHOWN_KEYS},
                 "secrets": {k: bool(self.env.get(k)) for k in SECRET_KEYS},
-                "ops": self.ops[-30:]}
+                "ops": self._public_ops(limit=30)}
 
     def job_detail(self, job_id: str) -> dict:
         self._refresh_env()
@@ -296,10 +320,13 @@ class Lab:
         box = next((b for b in boxes if b["name"] == self.box_name), boxes[0] if boxes else None)
         box_for_job = box if box and box.get("status") and box["status"].get("job") == job_id else None
         history = [h for h in (box["history"] if box else []) if h.get("job") == job_id]
+        if job.get("kind", "crawl") == "build":
+            return {"job": job, "build": self.build_progress(job_id), "progress": self._job_summary(job, windows)["progress"],
+                    "ops": self._public_ops(job_id), "now": _now()}
         return {"job": job, "progress": self.jobs.progress(job, windows),
                 "batches": [b for b in self.batches() if b.get("job") == job_id],
                 "box": box_for_job, "box_any": box, "history": history,
-                "ops": [o for o in self.ops if o.get("job") == job_id][-20:], "now": _now()}
+                "ops": self._public_ops(job_id), "now": _now()}
 
     def _reconcile(self, boxes: list) -> None:
         """A running job whose box reports every window complete is finished for it: push and delete."""
@@ -326,7 +353,10 @@ class Lab:
         self.jobs.transition(job_id, state, box=self.box_name, action=action)
 
         def done(rc: int) -> None:
-            if rc == 0:
+            current = self.jobs.get(job_id)["state"]
+            if current == "stopping" and action == "build":
+                self.jobs.transition(job_id, "stopped", outcome="stopped")
+            elif rc == 0:
                 self.jobs.transition(job_id, ok_state, outcome="ok")
             else:
                 self.jobs.transition(job_id, "failed", outcome=f"{fail_note} (exit {rc})")
@@ -341,6 +371,45 @@ class Lab:
         self.jobs._write(job)
         return job
 
+    def _build_action(self, job: dict, action: str) -> dict:
+        """Build jobs run on the lab: start launches lab_build.sh, stop terminates it between steps."""
+        job_id = job["id"]
+        if action == "start":
+            if job["state"] in ACTIVE_STATES:
+                raise ValueError(f"the job is already {job['state']}")
+            other = self.jobs.active("build")
+            if other:
+                raise ValueError(f"'{other['name']}' is {other['state']}; stop it first")
+            (self.root / "builds" / f"{job_id}.json").unlink(missing_ok=True)
+            return self._run_for_job(job_id, "running", "build", ["--job", job_id, *build_args(job["params"])],
+                                     "complete", "build failed: see the run's log")
+        if action in ("stop", "force_stop"):
+            if job["state"] != "running":
+                raise ValueError(f"nothing to stop: the job is {job['state']}")
+            op_id = job["runs"][-1].get("op") if job["runs"] else None
+            self.jobs.transition(job_id, "stopping")
+            if not self.stop_op(op_id):
+                return self.jobs.transition(job_id, "stopped", outcome="stopped (the build had already exited)")
+            return self.jobs.get(job_id)
+        if action in ("pause", "resume"):
+            raise ValueError("a build runs on the lab; stop it and start it again instead of pausing")
+        if action == "cancel":
+            self.jobs.delete(job_id)
+            (self.root / "builds" / f"{job_id}.json").unlink(missing_ok=True)
+            return {"deleted": job_id}
+        raise ValueError("unknown job action")
+
+    def stop_op(self, op_id: str | None) -> bool:
+        """SIGTERM the script behind an op; True if it was still running."""
+        for op in self.ops:
+            if op["id"] == op_id and op["returncode"] is None and op.get("_proc") is not None:
+                try:
+                    op["_proc"].terminate()
+                except OSError:
+                    return False
+                return True
+        return False
+
     def job_action(self, payload: dict) -> dict:
         self._refresh_env()
         action = payload.get("action")
@@ -349,16 +418,20 @@ class Lab:
             preset = PRESETS.get(payload.get("preset") or "")
             params = {**(preset["params"] if preset else {}), **(payload.get("params") or {})}
             name = payload.get("name") or (preset["name"] if preset else "")
-            return self.jobs.create(name, params, payload.get("note", ""))
+            kind = payload.get("kind") or (preset["kind"] if preset else "crawl")
+            return self.jobs.create(name, params, payload.get("note", ""), kind=kind)
         if action == "estimate":
             return estimate(clean_params(payload.get("params") or {}))
         if action == "update":
             return self.jobs.update(job_id, payload.get("name"), payload.get("params"), payload.get("note"))
         job = self.jobs.get(job_id)
+        kind = job.get("kind", "crawl")
+        if kind == "build":
+            return self._build_action(job, action)
         if action == "start":
             if job["state"] in ACTIVE_STATES:
                 raise ValueError(f"the job is already {job['state']}")
-            other = self.jobs.active()
+            other = self.jobs.active("crawl")
             if other:
                 raise ValueError(f"'{other['name']}' is {other['state']}; stop it first")
             self.set_control(self.box_name, "run")
@@ -418,7 +491,7 @@ class Lab:
     def run_script(self, action: str, args: list | None = None, job: str | None = None, on_done=None) -> dict:
         if action not in SCRIPTS:
             raise ValueError("unknown action")
-        args = [str(a) for a in (args or []) if str(a).startswith("--") or str(a).replace("-", "").isalnum()]
+        args = [str(a) for a in (args or []) if re.fullmatch(r"--?[A-Za-z0-9._,:=-]+|[A-Za-z0-9._,:-]+", str(a))]
         ops_dir = self.root / "ops"
         ops_dir.mkdir(parents=True, exist_ok=True)
         stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
@@ -428,14 +501,17 @@ class Lab:
             raise ValueError(f"{script} is missing")
         env = dict(os.environ, RLREPLAY_LAB_ENV=str(self.env_path))
         with self.lock:
-            running = [o for o in self.ops if o["returncode"] is None]
+            # One box operation at a time (up / down / image share hcloud and the box); a build runs
+            # on the lab for hours and must not block them, but only one build at a time.
+            running = [o for o in self.ops if o["returncode"] is None
+                       and (o["action"] == action or (action != "build" and o["action"] != "build"))]
             if running:
                 raise ValueError(f"{running[0]['action']} is still running")
             handle = open(log_path, "wb")
             proc = subprocess.Popen([_bash(), str(script), *args], stdout=handle, stderr=subprocess.STDOUT,
                                     env=env, cwd=str(self.repo))
             op = {"id": stamp, "action": action, "args": args, "job": job, "started": _now(), "finished": None,
-                  "returncode": None, "log": str(log_path)}
+                  "returncode": None, "log": str(log_path), "_proc": proc}
             self.ops.append(op)
 
         def wait():
@@ -449,7 +525,7 @@ class Lab:
                 except Exception as exc:  # noqa: BLE001
                     sys.stderr.write(f"job callback failed: {exc}\n")
         threading.Thread(target=wait, daemon=True).start()
-        return op
+        return {k: v for k, v in op.items() if not k.startswith("_")}
 
     def op_log(self, op_id: str, tail: int = 200) -> str:
         for op in self.ops:

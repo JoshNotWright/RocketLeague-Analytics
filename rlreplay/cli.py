@@ -119,17 +119,51 @@ def _gather_parts(parts_dir: Path):
     return pl.concat([pl.read_parquet(f) for f in files], how="vertical_relaxed")
 
 
+def _extract_one_decoded(path: str, parts_dir: str):
+    """Worker: the same rows as _extract_one, from a decoded .npz (rlreplay.fast)."""
+    import polars as pl
+    from .decode import load
+    from .fast import frames_from_decoded
+    replay_id = Path(path).stem
+    target = Path(parts_dir) / f"{replay_id}.parquet"
+    if target.exists():
+        return replay_id, "cached", None
+    try:
+        dec = load(path)
+        rows = frames_from_decoded(dec)
+        head = dec.get("header") or {}
+        for row in rows:
+            row["header_team0_score"] = head.get("team0_score")
+            row["header_team1_score"] = head.get("team1_score")
+            row["header_num_frames"] = head.get("num_frames")
+        if rows:
+            pl.DataFrame(rows, infer_schema_length=None).write_parquet(target)
+        return replay_id, "ok", None
+    except Exception as exc:  # noqa: BLE001
+        return replay_id, "failed", f"{type(exc).__name__}: {str(exc)[:200]}"
+
+
+def _source_paths(args):
+    """Replays to process: decoded .npz files with --decoded, raw .replay files with --raw."""
+    if getattr(args, "decoded", None):
+        return sorted(str(p) for p in Path(args.decoded).glob("*.npz")), True
+    if not args.raw:
+        raise SystemExit("give --raw <folder of .replay> or --decoded <folder of .npz>")
+    return sorted(str(p) for p in Path(args.raw).glob("*.replay")), False
+
+
 def cmd_extract(args):
     import polars as pl
-    paths = sorted(str(p) for p in Path(args.raw).glob("*.replay"))
+    paths, decoded = _source_paths(args)
     if args.limit:
         paths = paths[:args.limit]
     parts_dir = Path(args.out).with_name(Path(args.out).stem + ".parts")
     parts_dir.mkdir(parents=True, exist_ok=True)
     failures = {}
     started = time.time()
+    worker = _extract_one_decoded if decoded else _extract_one
     with ProcessPoolExecutor(max_workers=args.workers) as pool:
-        futures = [pool.submit(_extract_one, p, str(parts_dir)) for p in paths]
+        futures = [pool.submit(worker, p, str(parts_dir)) for p in paths]
         for n, future in enumerate(as_completed(futures), 1):
             replay_id, status, error = future.result()
             if error:
@@ -167,16 +201,34 @@ def _touches_one(path: str, parts_dir: str):
         return replay_id, "failed", f"{type(exc).__name__}: {str(exc)[:200]}"
 
 
+def _touches_one_decoded(path: str, parts_dir: str):
+    import polars as pl
+    from .decode import load
+    from .fast import touches_from_decoded
+    replay_id = Path(path).stem
+    target = Path(parts_dir) / f"{replay_id}.parquet"
+    if target.exists():
+        return replay_id, "cached", None
+    try:
+        rows = touches_from_decoded(load(path))
+        if rows:
+            pl.DataFrame(rows, infer_schema_length=None).write_parquet(target)
+        return replay_id, "ok", None
+    except Exception as exc:  # noqa: BLE001
+        return replay_id, "failed", f"{type(exc).__name__}: {str(exc)[:200]}"
+
+
 def cmd_touches(args):
-    paths = sorted(str(p) for p in Path(args.raw).glob("*.replay"))
+    paths, decoded = _source_paths(args)
     if args.limit:
         paths = paths[:args.limit]
     parts_dir = Path(args.out).with_name(Path(args.out).stem + ".parts")
     parts_dir.mkdir(parents=True, exist_ok=True)
     failures = {}
     started = time.time()
+    worker = _touches_one_decoded if decoded else _touches_one
     with ProcessPoolExecutor(max_workers=args.workers) as pool:
-        futures = [pool.submit(_touches_one, p, str(parts_dir)) for p in paths]
+        futures = [pool.submit(worker, p, str(parts_dir)) for p in paths]
         for n, future in enumerate(as_completed(futures), 1):
             replay_id, status, error = future.result()
             if error:
@@ -420,10 +472,12 @@ def main(argv=None):
     p.add_argument("--raw", required=True); p.add_argument("--workers", type=int, default=8)
     p.add_argument("--limit", type=int, default=0)
     p.set_defaults(func=cmd_download)
-    p = sub.add_parser("extract"); p.add_argument("--raw", required=True); p.add_argument("--out", required=True)
+    p = sub.add_parser("extract"); p.add_argument("--raw", default=None); p.add_argument("--out", required=True)
+    p.add_argument("--decoded", default=None, help="folder of decoded .npz (the archive layout) instead of --raw")
     p.add_argument("--workers", type=int, default=None); p.add_argument("--limit", type=int, default=0)
     p.set_defaults(func=cmd_extract)
-    p = sub.add_parser("touches"); p.add_argument("--raw", required=True); p.add_argument("--out", required=True)
+    p = sub.add_parser("touches"); p.add_argument("--raw", default=None); p.add_argument("--out", required=True)
+    p.add_argument("--decoded", default=None, help="folder of decoded .npz (the archive layout) instead of --raw")
     p.add_argument("--workers", type=int, default=None); p.add_argument("--limit", type=int, default=0)
     p.set_defaults(func=cmd_touches)
     p = sub.add_parser("xg"); p.add_argument("--touches", required=True, action="append", help="repeatable or comma-separated")

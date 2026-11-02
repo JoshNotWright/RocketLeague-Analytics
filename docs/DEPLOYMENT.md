@@ -274,18 +274,36 @@ starts from the ledger and fetches only what is new.
 
 ---
 
-## 5. Using the archive
+## 5. Using the archive: build jobs
 
-Build tables on the lab, train on your PC. On the lab, once, a venv with the v2 requirements:
+The model tables are built on the lab by a **build job** (Jobs → New job → Build tables). It
+runs `lab/build.py` in the lab's venv (created by the bootstrap) and writes, per playlist,
+band and month:
+
+| table | from | for |
+| --- | --- | --- |
+| `features/frame/<p>/<b>/<month>.parquet` | decoded replays, `rlreplay extract --decoded` | per-player frame features: references, cards |
+| `features/touches/<p>/<b>/<month>.parquet` | decoded replays, `rlreplay touches --decoded` | xG, threat, value models |
+| `features/decisions/<p>/<b>/<month>/` | decoded replays, `rlreplay decisions-build` | the decision policy (one parquet per replay) |
+| `features/table/<p>/<b>/<month>.parquet` | the ledger, `rlreplay meta-table` | player-game rows: ranks, dates, ballchasing stats |
+
+The job is incremental: a window is rebuilt only when it has more decoded replays (or ledger
+lines) than at the last build, and inside a window only new replays are parsed, so running it
+after every crawl costs minutes, not hours. The job page shows every window in scope with a
+chip per table, and the run's log. Stop ends it after the current table; Continue picks up
+where it left; "force" rebuilds everything in scope (after a change to the extractors). A
+build job runs alongside a crawl job; two builds do not.
+
+The extractors behind `--decoded` (`rlreplay/fast.py`) reproduce the raw-replay ones row for
+row; the check is in `tests/test_rlreplay_fast.py`.
+
+Train on your PC: sync the tables over the tailnet before a refit,
 ```bash
-cd /opt/rlreplay && python3 -m venv .venv && .venv/bin/pip install -r requirements.txt -r requirements-v2.txt
+rclone sync lab:/media/rocketleague/rl/features data/features/lab --transfers 8
 ```
-Then per band and month (the decoded folder is the input; no raws are needed):
-```bash
-.venv/bin/python -m rlreplay decisions-build --decoded /media/rocketleague/rl/decoded/ranked-doubles/diamond/2025-07 --out /media/rocketleague/rl/features/decisions/diamond/2025-07 --horizon 2.5
-```
-and `extract` / `touches` likewise. Sync `/media/rocketleague/rl/features` to your PC with rclone over the
-tailnet before a refit. Pull a decoded folder locally only to prototype a feature.
+then `xg`, `value`, `decisions-fit` and `build-reference` take comma-separated lists of the
+per-window files (`--touches`, `--table`, `--frames`). Pull a decoded folder locally only to
+prototype a feature.
 
 ---
 

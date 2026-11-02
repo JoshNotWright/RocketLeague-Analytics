@@ -19,7 +19,8 @@ operator PC  --tailnet-->  lab (UI, secrets, data tree, validator)  <--tailnet--
 | `scripts/lab_validate.py` | lab | hashes every pushed `.npz`, checks the ledger holds every id, writes `<batch>.ok` or `.bad` |
 | `scripts/crawler_up.sh`, `crawler_down.sh`, `crawler_status.sh`, `crawler_image.sh` | lab | server lifecycle via `hcloud`; secrets piped over SSH stdin, never on a command line |
 | `scripts/lab_setup.sh`, `scripts/lab_cmd.sh` | lab | one-time setup; the forced command that limits the box's key to SFTP + the validator |
-| `lab/server.py`, `lab/static/index.html` | lab | the web UI (standard library, bound to the tailnet address) |
+| `lab/server.py`, `lab/static/index.html`, `lab/jobs.py` | lab | the web UI and its jobs (standard library, bound to the tailnet address) |
+| `lab/build.py`, `scripts/lab_build.sh`, `rlreplay/fast.py` | lab | build jobs: the model tables from decoded windows, incrementally; the decoded-input extractors |
 | `deploy/rlreplay-crawler.service`, `deploy/rlreplay-lab-ui.service`, `deploy/lab.env.example` | | systemd units and the env template |
 | `rlreplay/crawl.py --ledger-only`, `--known-from` | box | a metadata line alone counts as done; ids from other folders are never fetched |
 
@@ -42,7 +43,10 @@ meta/<playlist>/<band>/<yyyy-mm>.jsonl          the ledger; losing it is the onl
 meta/<playlist>/<band>/<yyyy-mm>.state.json     the crawl cursor per window
 batches/<batch>.manifest.json, .ok, .bad
 boxes/<box>/status.json, control.json, tailnet_ip, history.jsonl
-jobs/<id>.json                                  a job: name, state, params, runs
+jobs/<id>.json                                  a job: name, kind (crawl | build), state, params, runs
+builds/<id>.json                                a build job's progress, written after every table
+features/<table>/<playlist>/<band>/<month>...   the model tables (frame, touches, decisions/, table)
+features/build_state.json                       what each window's tables were built from
 ops/<timestamp>-<action>.log                    logs of scripts the UI launched
 ```
 

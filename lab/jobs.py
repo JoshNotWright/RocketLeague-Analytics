@@ -6,6 +6,10 @@ continued starts a new box, which pulls the ledger and carries on where the prev
 
     jobs/<id>.json     {"id", "name", "state", "params", "runs", "created", "updated", "note"}
 
+Two kinds. A **crawl** job runs on a Hetzner box; a **build** job runs on the lab itself
+(lab/build.py) and turns the archive's decoded windows into the model tables. One job of
+each kind may be active at a time.
+
 States
     draft      saved, never started
     running    a box is up (or being created) and crawling
@@ -48,10 +52,22 @@ DEFAULT_PARAMS = {
     "server_type": "cpx32",
     "location": "fsn1",
 }
+BUILD_TABLES = ("frame", "touches", "decisions", "table")
+DEFAULT_BUILD_PARAMS = {
+    "tables": list(BUILD_TABLES),
+    "horizon": 2.5,
+    "hz": 5.0,
+    "playlist": "",          # "" = every playlist in the archive
+    "bands": "",             # "" = every band; else comma-separated names
+    "months": None,          # None = every month; else {"first", "last"}
+    "force": False,
+    "workers": None,
+}
 PRESETS = {
-    "smoke": {"name": "Smoke test", "params": {**DEFAULT_PARAMS, "months": {"first": "2025-07", "last": "2025-07"},
-                                                "per_window": 300, "batch_size": 500}},
-    "full": {"name": "Full crawl", "params": dict(DEFAULT_PARAMS)},
+    "smoke": {"name": "Smoke test", "kind": "crawl",
+              "params": {**DEFAULT_PARAMS, "months": {"first": "2025-07", "last": "2025-07"}, "per_window": 300, "batch_size": 500}},
+    "full": {"name": "Full crawl", "kind": "crawl", "params": dict(DEFAULT_PARAMS)},
+    "build": {"name": "Build tables", "kind": "build", "params": dict(DEFAULT_BUILD_PARAMS)},
 }
 _MONTH = re.compile(r"^\d{4}-(0[1-9]|1[0-2])$")
 _ID_ALPHABET = "abcdefghjkmnpqrstuvwxyz23456789"   # no 0/o/1/l/i: ids are read aloud and typed
@@ -144,6 +160,74 @@ def clean_params(raw: dict) -> dict:
     return p
 
 
+def clean_build_params(raw: dict) -> dict:
+    p = dict(DEFAULT_BUILD_PARAMS)
+    p["tables"] = list(BUILD_TABLES)
+    raw = raw or {}
+    if "tables" in raw:
+        tables = raw["tables"]
+        if isinstance(tables, str):
+            tables = [t.strip() for t in tables.split(",") if t.strip()]
+        bad = [t for t in tables if t not in BUILD_TABLES]
+        if bad or not tables:
+            raise ValueError(f"tables must be some of {', '.join(BUILD_TABLES)}")
+        p["tables"] = [t for t in BUILD_TABLES if t in tables]
+    for key, lo, hi in (("horizon", 0.1, 10.0), ("hz", 1.0, 30.0)):
+        if key in raw:
+            v = float(raw[key])
+            if not lo <= v <= hi:
+                raise ValueError(f"{key} must be between {lo} and {hi}")
+            p[key] = v
+    if "playlist" in raw:
+        v = str(raw["playlist"] or "").strip()
+        if v and not re.fullmatch(r"[a-z0-9-]{3,40}", v):
+            raise ValueError("playlist must be a ballchasing playlist id or empty for all")
+        p["playlist"] = v
+    if "bands" in raw:
+        v = str(raw["bands"] or "").strip()
+        names = [b.strip() for b in v.split(",") if b.strip()]
+        if any(not re.fullmatch(r"[a-z0-9-]{1,40}", b) for b in names):
+            raise ValueError("bands are comma-separated band names, or empty for all")
+        p["bands"] = ",".join(names)
+    months = raw.get("months")
+    if months in (None, "", {}):
+        if "months" in raw:
+            p["months"] = None
+    else:
+        first, last = str(months.get("first", "")).strip(), str(months.get("last", "")).strip()
+        if not (_MONTH.match(first) and _MONTH.match(last)) or first > last:
+            raise ValueError("months must look like 2025-07 and be in order, or be empty for all")
+        p["months"] = {"first": first, "last": last}
+    if "force" in raw:
+        p["force"] = bool(raw["force"]) and str(raw["force"]).lower() not in ("false", "0", "")
+    if "workers" in raw:
+        v = raw["workers"]
+        if v in (None, "", "null"):
+            p["workers"] = None
+        else:
+            v = int(v)
+            if not 1 <= v <= 64:
+                raise ValueError("workers must be between 1 and 64")
+            p["workers"] = v
+    return p
+
+
+def build_args(params: dict) -> list:
+    """Arguments for scripts/lab_build.sh from a build job's parameters."""
+    args = ["--tables", ",".join(params["tables"]), "--horizon", str(params["horizon"]), "--hz", str(params["hz"])]
+    if params.get("playlist"):
+        args += ["--playlist", params["playlist"]]
+    if params.get("bands"):
+        args += ["--bands", params["bands"]]
+    if params.get("months"):
+        args += ["--months", f"{params['months']['first']}..{params['months']['last']}"]
+    if params.get("force"):
+        args.append("--force")
+    if params.get("workers"):
+        args += ["--workers", str(params["workers"])]
+    return args
+
+
 def windows_of(params: dict) -> list:
     """Months outer, bands inner: the order the box crawls them."""
     bands = parse_bands(params["bands"])
@@ -210,23 +294,25 @@ class JobStore:
         rest = sorted([j for j in out if j.get("state") not in ACTIVE_STATES], key=lambda j: j.get("created", ""), reverse=True)
         return active + rest
 
-    def active(self) -> dict | None:
+    def active(self, kind: str | None = None) -> dict | None:
         for job in self.all():
-            if job.get("state") in ACTIVE_STATES:
+            if job.get("state") in ACTIVE_STATES and (kind is None or job.get("kind", "crawl") == kind):
                 return job
         return None
 
     # -- lifecycle --
 
-    def create(self, name: str, params: dict, note: str = "") -> dict:
+    def create(self, name: str, params: dict, note: str = "", kind: str = "crawl") -> dict:
         name = str(name or "").strip()
         if not 1 <= len(name) <= 60:
             raise ValueError("a job needs a name of up to 60 characters")
-        params = clean_params(params)
+        if kind not in ("crawl", "build"):
+            raise ValueError("kind must be crawl or build")
+        params = clean_build_params(params) if kind == "build" else clean_params(params)
         job_id = new_id()
         while self._path(job_id).exists():
             job_id = new_id()
-        job = {"id": job_id, "name": name, "state": "draft", "params": params, "runs": [],
+        job = {"id": job_id, "name": name, "kind": kind, "state": "draft", "params": params, "runs": [],
                "created": _now(), "updated": None, "note": str(note or "")[:500]}
         return self._write(job)
 
@@ -240,7 +326,8 @@ class JobStore:
                 raise ValueError("a job needs a name of up to 60 characters")
             job["name"] = name
         if params is not None:
-            job["params"] = clean_params({**job["params"], **params})
+            merged = {**job["params"], **params}
+            job["params"] = clean_build_params(merged) if job.get("kind", "crawl") == "build" else clean_params(merged)
         if note is not None:
             job["note"] = str(note)[:500]
         return self._write(job)
@@ -248,7 +335,7 @@ class JobStore:
     def transition(self, job_id: str, state: str, outcome: str | None = None, **run_fields) -> dict:
         job = self.get(job_id)
         if state in ("running", "finishing", "stopping") and state != job["state"]:
-            other = self.active()
+            other = self.active(job.get("kind", "crawl"))
             if other and other["id"] != job_id and state == "running":
                 raise ValueError(f"'{other['name']}' is {other['state']}; stop it before starting another job")
         job["state"] = state

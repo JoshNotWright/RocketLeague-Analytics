@@ -4,7 +4,8 @@
 # sure the service is running. If any step after the server is created fails, the server and its
 # boot firewall are deleted again (nothing of value is on a box that never started crawling);
 # --keep-on-failure leaves it for inspection. Runs on the lab.
-# Usage: scripts/crawler_up.sh [--type cpx32] [--name rl-crawler] [--keep-on-failure]
+# Usage: scripts/crawler_up.sh [--job <id>] [--type cpx32] [--name rl-crawler] [--keep-on-failure]
+# --job takes the crawl parameters from <LAB_ROOT>/jobs/<id>.json (the UI's jobs) instead of lab.env.
 # shellcheck source=crawler_lib.sh
 . "$(dirname "$0")/crawler_lib.sh"
 need_cmd hcloud ssh curl
@@ -15,15 +16,18 @@ while [[ $# -gt 0 ]]; do
         --type) CRAWLER_TYPE="$2"; shift 2 ;;
         --name) CRAWLER_NAME="$2"; shift 2 ;;
         --keep-on-failure) KEEP_ON_FAILURE=1; shift ;;
+        --job) JOB_ID="$2"; shift 2 ;;
         *) die "unknown argument $1" ;;
     esac
 done
 [[ -r "$CRAWLER_KEY" ]] || die "$CRAWLER_KEY is not readable (run scripts/lab_setup.sh)"
+[[ -n "${JOB_ID:-}" ]] && load_job "$JOB_ID"
 
 mkdir -p "$LAB_ROOT/boxes/$CRAWLER_NAME" "$LAB_ROOT/batches" "$LAB_ROOT/meta" "$LAB_ROOT/decoded"
 set_control run
 
 if server_exists; then
+    [[ -z "${JOB_ID:-}" ]] || die "$CRAWLER_NAME already exists and may be running another job; stop it first"
     log "$CRAWLER_NAME exists; making sure the service runs"
     box_ssh 'systemctl enable --now rlreplay-crawler && systemctl is-active rlreplay-crawler'
     exit 0

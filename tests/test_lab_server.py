@@ -83,16 +83,18 @@ class LabServerTests(unittest.TestCase):
         self.assertEqual(json.loads((self.root / "boxes" / "rl-crawler" / "control.json").read_text())["command"], "pause")
         self.assertEqual(self.call("POST", "/api/control", {"box": "rl-crawler", "command": "explode"})[0], 400)
         self.assertEqual(self.call("POST", "/api/control", {"box": "../x", "command": "stop"})[0], 400)
-        status, cfg = self.call("POST", "/api/config", {"values": {"CRAWLER_BATCH": "10000", "CRAWLER_TYPE": "cpx22"}})
+        status, cfg = self.call("POST", "/api/config", {"values": {"CRAWLER_LOCATION": "nbg1", "CRAWLER_TYPE": "cpx22"}})
         self.assertEqual(status, 200)
-        self.assertEqual(cfg["CRAWLER_BATCH"], "10000")
+        self.assertEqual(cfg["CRAWLER_LOCATION"], "nbg1")
         text = self.env_path.read_text()
         self.assertIn("# comment stays", text)
         self.assertIn("HCLOUD_TOKEN=secret-value", text)
         self.assertIn("CRAWLER_NAME=rl-crawler   # the box name", text)
-        self.assertIn("CRAWLER_BATCH=10000", text)
+        self.assertIn("CRAWLER_LOCATION=nbg1", text)
         self.assertIn("CRAWLER_TYPE=cpx22", text)
         self.assertEqual(self.call("POST", "/api/config", {"values": {"HCLOUD_TOKEN": "x"}})[0], 400)
+        # what a job crawls is no longer an env setting
+        self.assertEqual(self.call("POST", "/api/config", {"values": {"CRAWLER_BATCH": "10"}})[0], 400)
         self.assertIn("HCLOUD_TOKEN=secret-value", self.env_path.read_text())
 
     def test_run_script_logs(self):

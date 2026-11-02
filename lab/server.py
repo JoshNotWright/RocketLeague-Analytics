@@ -4,10 +4,12 @@
 
 Shows what the lab holds (replays per playlist, band and month, decoded bytes), the batches the
 box has pushed and whether each validated, the live status the box writes every cycle, and the
-run configuration. Buttons write the box's control file (pause / resume / stop) and run the
-lab-side scripts (crawler_up.sh, crawler_down.sh, crawler_image.sh) in the background with
-their logs captured under <LAB_ROOT>/ops. Secrets never leave the env file: the page only sees
-whether each is set, and the config editor can only change the CRAWLER_* settings.
+jobs (lab/jobs.py): a job is a saved set of crawl parameters with a lifecycle; starting one
+creates the box with those parameters, pause/resume write the box's control file, stop pushes,
+validates and deletes the box, continue starts a new box that resumes from the ledger. The
+lab-side scripts run in the background with their logs captured under <LAB_ROOT>/ops. Secrets
+never leave the env file: the page only sees whether each is set, and the settings editor can
+only change the infrastructure keys (box name, server type, location).
 
 There is no login: the server binds to the tailnet address from lab.env (LAB_UI_BIND) and the
 tailnet is the perimeter. Never bind it to a routable interface.
@@ -26,11 +28,12 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
+from .jobs import ACTIVE_STATES, PRESETS, JobStore, clean_params, estimate
+
 REPO = Path(__file__).resolve().parent.parent
 STATIC = Path(__file__).resolve().parent / "static"
 SECRET_KEYS = ("HCLOUD_TOKEN", "BALLCHASING_API_KEY", "TS_AUTHKEY")
-EDITABLE_KEYS = ("CRAWLER_NAME", "CRAWLER_TYPE", "CRAWLER_LOCATION", "CRAWLER_BATCH", "CRAWLER_WORKERS",
-                 "CRAWLER_PLAYLIST", "CRAWLER_BANDS", "CRAWLER_MONTHS", "CRAWLER_PER_WINDOW")
+EDITABLE_KEYS = ("CRAWLER_NAME", "CRAWLER_TYPE", "CRAWLER_LOCATION")
 SHOWN_KEYS = EDITABLE_KEYS + ("LAB_ROOT", "LAB_USER", "LAB_TS_HOST", "LAB_REPO", "HCLOUD_SSH_KEY")
 SCRIPTS = {"up": "crawler_up.sh", "down": "crawler_down.sh", "image": "crawler_image.sh"}
 
@@ -159,6 +162,7 @@ class Lab:
         self.ops: list = []
         self._history_last: dict = {}
         self.inventory = None
+        self.jobs = None
         self._refresh_env()
 
     def _refresh_env(self):
@@ -167,6 +171,12 @@ class Lab:
         self.repo = Path(self.env.get("LAB_REPO", str(REPO)))
         if self.inventory is None or self.inventory.root != self.root:
             self.inventory = Inventory(self.root)
+        if self.jobs is None or self.jobs.dir != self.root / "jobs":
+            self.jobs = JobStore(self.root)
+
+    @property
+    def box_name(self) -> str:
+        return self.env.get("CRAWLER_NAME") or "rl-crawler"
 
     # -- read --
 
@@ -180,7 +190,7 @@ class Lab:
                 man = {}
             ok = manifest.with_name(f"{name}.ok")
             bad = manifest.with_name(f"{name}.bad")
-            entry = {"name": name, "box": man.get("box"), "created": man.get("created"),
+            entry = {"name": name, "box": man.get("box"), "job": man.get("job"), "created": man.get("created"),
                      "count": len(man.get("items", [])), "failed": len(man.get("failed", [])),
                      "bytes": man.get("bytes", 0), "windows": [f"{e['band']}/{e['month']}" for e in man.get("ledger", [])],
                      "validated": None, "problems": None}
@@ -200,7 +210,7 @@ class Lab:
     def _record_history(self, name: str, status: dict) -> list:
         """Append one point per new status report to boxes/<box>/history.jsonl; return the recent tail."""
         path = self.root / "boxes" / name / "history.jsonl"
-        point = {"t": status.get("updated"), "rate": status.get("per_minute"), "saved": status.get("saved_this_run"),
+        point = {"t": status.get("updated"), "job": status.get("job"), "rate": status.get("per_minute"), "saved": status.get("saved_this_run"),
                  "batch": (status.get("current") or {}).get("count"), "phase": status.get("phase"),
                  "unvalidated": len(status.get("unvalidated") or [])}
         last = self._history_last.get(name)
@@ -253,18 +263,126 @@ class Lab:
             out.append({"name": name, "status": status, "control": control, "status_age_s": age, "history": history})
         return out
 
+    def _job_summary(self, job: dict, windows: list) -> dict:
+        prog = self.jobs.progress(job, windows)
+        prog.pop("windows", None)
+        return {"id": job["id"], "name": job["name"], "state": job["state"], "params": job["params"],
+                "created": job["created"], "updated": job["updated"], "note": job.get("note", ""),
+                "last_run": job["runs"][-1] if job["runs"] else None, "runs": len(job["runs"]), "progress": prog}
+
     def overview(self) -> dict:
         self._refresh_env()
         usage = shutil.disk_usage(self.root) if self.root.exists() else None
         windows = self.inventory.windows()
-        return {"now": _now(), "root": str(self.root),
+        boxes = self.boxes()
+        self._reconcile(boxes)
+        jobs = [self._job_summary(j, windows) for j in self.jobs.all()]
+        active = next((j for j in jobs if j["state"] in ACTIVE_STATES), None)
+        return {"now": _now(), "root": str(self.root), "box_name": self.box_name,
                 "disk": {"free": usage.free, "total": usage.total} if usage else None,
                 "totals": {"replays": sum(w["replays"] for w in windows), "decoded": sum(w["decoded"] for w in windows),
                            "bytes": sum(w["bytes"] for w in windows)},
-                "windows": windows, "batches": self.batches(), "boxes": self.boxes(),
+                "windows": windows, "batches": self.batches(), "boxes": boxes,
+                "jobs": jobs, "active_job": active["id"] if active else None, "presets": PRESETS,
                 "config": {k: self.env.get(k, "") for k in SHOWN_KEYS},
                 "secrets": {k: bool(self.env.get(k)) for k in SECRET_KEYS},
-                "ops": self.ops[-20:]}
+                "ops": self.ops[-30:]}
+
+    def job_detail(self, job_id: str) -> dict:
+        self._refresh_env()
+        job = self.jobs.get(job_id)
+        windows = self.inventory.windows()
+        boxes = self.boxes()
+        box = next((b for b in boxes if b["name"] == self.box_name), boxes[0] if boxes else None)
+        box_for_job = box if box and box.get("status") and box["status"].get("job") == job_id else None
+        history = [h for h in (box["history"] if box else []) if h.get("job") == job_id]
+        return {"job": job, "progress": self.jobs.progress(job, windows),
+                "batches": [b for b in self.batches() if b.get("job") == job_id],
+                "box": box_for_job, "box_any": box, "history": history,
+                "ops": [o for o in self.ops if o.get("job") == job_id][-20:], "now": _now()}
+
+    def _reconcile(self, boxes: list) -> None:
+        """A running job whose box reports every window complete is finished for it: push and delete."""
+        job = self.jobs.active()
+        if not job or job["state"] != "running":
+            return
+        box = next((b for b in boxes if b["name"] == self.box_name), None)
+        status = box["status"] if box else None
+        if not status or status.get("job") != job["id"] or status.get("phase") != "all windows complete":
+            return
+        if box.get("status_age_s") is not None and box["status_age_s"] > 3600:
+            return
+        if any(o["returncode"] is None for o in self.ops):
+            return
+        try:
+            self._run_for_job(job["id"], "finishing", "down", [], "complete", "finish failed; use Stop or Force stop")
+        except ValueError:
+            pass
+
+    # -- jobs --
+
+    def _run_for_job(self, job_id: str, state: str, action: str, args: list, ok_state: str, fail_note: str) -> dict:
+        previous = self.jobs.get(job_id)["state"]
+        self.jobs.transition(job_id, state, box=self.box_name, action=action)
+
+        def done(rc: int) -> None:
+            if rc == 0:
+                self.jobs.transition(job_id, ok_state, outcome="ok")
+            else:
+                self.jobs.transition(job_id, "failed", outcome=f"{fail_note} (exit {rc})")
+        try:
+            op = self.run_script(action, args, job=job_id, on_done=done)
+        except ValueError:
+            self.jobs.transition(job_id, previous if previous not in ACTIVE_STATES else "failed",
+                                 outcome="could not start the script")
+            raise
+        job = self.jobs.get(job_id)
+        job["runs"][-1]["op"] = op["id"]
+        self.jobs._write(job)
+        return job
+
+    def job_action(self, payload: dict) -> dict:
+        self._refresh_env()
+        action = payload.get("action")
+        job_id = payload.get("id", "")
+        if action == "create":
+            preset = PRESETS.get(payload.get("preset") or "")
+            params = {**(preset["params"] if preset else {}), **(payload.get("params") or {})}
+            name = payload.get("name") or (preset["name"] if preset else "")
+            return self.jobs.create(name, params, payload.get("note", ""))
+        if action == "estimate":
+            return estimate(clean_params(payload.get("params") or {}))
+        if action == "update":
+            return self.jobs.update(job_id, payload.get("name"), payload.get("params"), payload.get("note"))
+        job = self.jobs.get(job_id)
+        if action == "start":
+            if job["state"] in ACTIVE_STATES:
+                raise ValueError(f"the job is already {job['state']}")
+            other = self.jobs.active()
+            if other:
+                raise ValueError(f"'{other['name']}' is {other['state']}; stop it first")
+            self.set_control(self.box_name, "run")
+            return self._run_for_job(job_id, "running", "up", ["--job", job_id], "running", "start failed")
+        if action == "pause":
+            if job["state"] != "running":
+                raise ValueError("only a running job can be paused")
+            self.set_control(self.box_name, "pause")
+            return self.jobs.transition(job_id, "paused")
+        if action == "resume":
+            if job["state"] != "paused":
+                raise ValueError("only a paused job can be resumed")
+            self.set_control(self.box_name, "run")
+            return self.jobs.transition(job_id, "running")
+        if action in ("stop", "force_stop"):
+            if job["state"] not in ("running", "paused", "failed", "stopping", "finishing"):
+                raise ValueError(f"nothing to stop: the job is {job['state']}")
+            args = ["--force"] if action == "force_stop" else []
+            return self._run_for_job(job_id, "stopping", "down", args, "stopped",
+                                     "stop failed: unvalidated batches remain or the box is unreachable; Force stop deletes it anyway")
+        if action == "cancel":
+            self.jobs.delete(job_id)
+            return {"deleted": job_id}
+        raise ValueError("unknown job action")
 
     # -- write --
 
@@ -293,7 +411,7 @@ class Lab:
             self._refresh_env()
         return {k: self.env.get(k, "") for k in SHOWN_KEYS}
 
-    def run_script(self, action: str, args: list | None = None) -> dict:
+    def run_script(self, action: str, args: list | None = None, job: str | None = None, on_done=None) -> dict:
         if action not in SCRIPTS:
             raise ValueError("unknown action")
         args = [str(a) for a in (args or []) if str(a).startswith("--") or str(a).replace("-", "").isalnum()]
@@ -312,7 +430,7 @@ class Lab:
             handle = open(log_path, "wb")
             proc = subprocess.Popen([_bash(), str(script), *args], stdout=handle, stderr=subprocess.STDOUT,
                                     env=env, cwd=str(self.repo))
-            op = {"id": stamp, "action": action, "args": args, "started": _now(), "finished": None,
+            op = {"id": stamp, "action": action, "args": args, "job": job, "started": _now(), "finished": None,
                   "returncode": None, "log": str(log_path)}
             self.ops.append(op)
 
@@ -321,6 +439,11 @@ class Lab:
             handle.close()
             op["returncode"] = proc.returncode
             op["finished"] = _now()
+            if on_done is not None:
+                try:
+                    on_done(proc.returncode)
+                except Exception as exc:  # noqa: BLE001
+                    sys.stderr.write(f"job callback failed: {exc}\n")
         threading.Thread(target=wait, daemon=True).start()
         return op
 
@@ -372,6 +495,8 @@ class Handler(BaseHTTPRequestHandler):
                 self.wfile.write(body)
             elif url.path == "/api/overview":
                 self._json(200, self.lab.overview())
+            elif url.path == "/api/job":
+                self._json(200, self.lab.job_detail(parse_qs(url.query).get("id", [""])[0]))
             elif url.path == "/api/log":
                 q = parse_qs(url.query)
                 self._json(200, {"log": self.lab.op_log(q.get("op", [""])[0], int(q.get("tail", ["200"])[0]))})
@@ -388,6 +513,8 @@ class Handler(BaseHTTPRequestHandler):
             payload = self._read_json()
             if url.path == "/api/control":
                 self._json(200, self.lab.set_control(payload.get("box", ""), payload.get("command", "")))
+            elif url.path == "/api/jobs":
+                self._json(200, self.lab.job_action(payload))
             elif url.path == "/api/config":
                 self._json(200, self.lab.update_config(payload.get("values", {})))
             elif url.path == "/api/run":
@@ -403,7 +530,7 @@ class Handler(BaseHTTPRequestHandler):
 def serve(env_path, bind: str | None = None, port: int | None = None) -> ThreadingHTTPServer:
     lab = Lab(env_path)
     bind = bind or lab.env.get("LAB_UI_BIND") or "127.0.0.1"
-    port = int(port or lab.env.get("LAB_UI_PORT") or 8731)
+    port = int(lab.env.get("LAB_UI_PORT") or 8731) if port is None else int(port)   # 0 = any free port (tests)
     if bind == "0.0.0.0":
         raise SystemExit("refusing to bind the lab UI to every interface; set LAB_UI_BIND to the tailnet address")
     Handler.lab = lab

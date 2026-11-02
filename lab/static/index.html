@@ -30,7 +30,6 @@
   body { background: var(--bg); color: var(--ink); font: 14px/1.5 var(--sans); -webkit-font-smoothing: antialiased; }
   a { color: var(--accent); text-decoration: none; }
   .app { display: grid; grid-template-columns: 232px 1fr; min-height: 100%; }
-  /* sidebar */
   aside { border-right: 1px solid var(--line); background: var(--surface); padding: 20px 14px; display: flex; flex-direction: column; gap: 6px; position: sticky; top: 0; height: 100vh; }
   .brand { display: flex; align-items: center; gap: 10px; padding: 4px 8px 16px; }
   .brand .logo { width: 28px; height: 28px; border-radius: 8px; background: linear-gradient(135deg, var(--accent), var(--band-3)); }
@@ -40,18 +39,18 @@
   nav a:hover { background: var(--surface-2); color: var(--ink); } nav a.active { background: var(--accent-soft); color: var(--accent); }
   nav a .count { margin-left: auto; font-size: 11px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
   .side-foot { margin-top: auto; display: grid; gap: 10px; padding: 10px 8px 0; border-top: 1px solid var(--line); font-size: 12px; color: var(--ink-2); }
-  .pulse { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--good); box-shadow: 0 0 0 0 var(--good); animation: pulse 2s infinite; }
-  .pulse.warn { background: var(--warn); animation: none; } .pulse.off { background: var(--ink-3); animation: none; } .pulse.bad { background: var(--bad); animation: none; }
+  .pulse { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--good); box-shadow: 0 0 0 0 var(--good); animation: pulse 2s infinite; flex: none; }
+  .pulse.warn { background: var(--warn); animation: none; } .pulse.off { background: var(--ink-3); animation: none; } .pulse.bad { background: var(--bad); animation: none; } .pulse.muted { background: var(--accent); animation: none; }
   @keyframes pulse { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--good) 45%, transparent); } 70% { box-shadow: 0 0 0 8px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
   .minibar { height: 6px; border-radius: 3px; background: var(--track); overflow: hidden; } .minibar > i { display: block; height: 100%; background: var(--accent); }
-  /* main */
   main { padding: 28px 36px 72px; max-width: 1180px; width: 100%; }
   .page { display: none; } .page.active { display: block; animation: fade .18s ease-out; }
   @keyframes fade { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
   .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
-  .page-head h1 { margin: 0; font-size: 22px; font-weight: 650; letter-spacing: -.01em; }
+  .page-head h1 { margin: 0; font-size: 22px; font-weight: 650; letter-spacing: -.01em; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
   .page-head p { margin: 4px 0 0; color: var(--ink-2); max-width: 70ch; }
-  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); padding: 20px 22px; margin-bottom: 18px; }
+  .crumb { color: var(--ink-3); font-weight: 500; font-size: 13px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); padding: 20px 22px; margin-bottom: 18px; min-width: 0; overflow-wrap: anywhere; }
   .card h2 { font-size: 13px; font-weight: 600; margin: 0 0 14px; color: var(--ink-2); display: flex; align-items: baseline; gap: 10px; }
   .card h2 .hint { font-weight: 400; color: var(--ink-3); font-size: 12px; }
   .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
@@ -59,13 +58,14 @@
   .tile .k { color: var(--ink-3); font-size: 12px; } .tile .v { font-size: 24px; font-weight: 650; font-variant-numeric: tabular-nums; margin-top: 2px; letter-spacing: -.01em; }
   .tile .v small { font-size: 13px; color: var(--ink-3); font-weight: 500; } .tile .s { color: var(--ink-2); font-size: 12px; margin-top: 2px; }
   .hero { display: grid; grid-template-columns: 1fr auto; gap: 20px; align-items: center; }
-  .hero .state { font-size: 20px; font-weight: 650; letter-spacing: -.01em; display: flex; align-items: center; gap: 12px; }
+  .hero .state { font-size: 20px; font-weight: 650; letter-spacing: -.01em; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
   .hero .sub { color: var(--ink-2); margin-top: 4px; }
   .actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
   button { font: inherit; font-weight: 500; padding: 7px 13px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; transition: background .12s, border-color .12s; }
   button:hover { background: var(--surface-2); border-color: var(--ink-3); } button:disabled { opacity: .5; cursor: default; }
   button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); } button.primary:hover { filter: brightness(1.06); }
   button.danger { color: var(--bad); } button.danger:hover { background: var(--bad-soft); border-color: var(--bad); }
+  button.small { padding: 4px 10px; font-size: 12px; }
   .chip { display: inline-flex; align-items: center; gap: 6px; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 600; background: var(--accent-soft); color: var(--accent); white-space: nowrap; }
   .chip.good { background: var(--good-soft); color: var(--good); } .chip.warn { background: var(--warn-soft); color: var(--warn); } .chip.bad { background: var(--bad-soft); color: var(--bad); } .chip.muted { background: var(--track); color: var(--ink-2); }
   table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
@@ -75,7 +75,8 @@
   .cell { display: flex; align-items: center; gap: 8px; min-width: 110px; } .cell .spark { flex: 1; height: 6px; background: var(--track); border-radius: 3px; overflow: hidden; } .cell .spark i { display: block; height: 100%; }
   .cell b { font-weight: 500; min-width: 54px; text-align: right; } .cell .tick { color: var(--good); font-size: 12px; }
   .progress { height: 8px; background: var(--track); border-radius: 4px; overflow: hidden; margin: 8px 0 4px; } .progress > i { display: block; height: 100%; background: var(--accent); transition: width .4s; }
-  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; } .grid3 { display: grid; grid-template-columns: 2fr 1fr; gap: 18px; }
+  .progress.good > i { background: var(--good); }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; } .grid3 { display: grid; grid-template-columns: 2fr 1fr; gap: 18px; } .grid2 > *, .grid3 > * { min-width: 0; }
   @media (max-width: 900px) { .grid2, .grid3 { grid-template-columns: 1fr; } .app { grid-template-columns: 1fr; } aside { position: static; height: auto; flex-direction: row; flex-wrap: wrap; align-items: center; } .side-foot { display: none; } main { padding: 20px 16px 60px; } .hero { grid-template-columns: 1fr; } }
   .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--ink-2); margin-bottom: 8px; } .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
   svg.chart { width: 100%; height: auto; display: block; } svg.chart text { font-family: var(--sans); font-size: 12px; fill: var(--ink-3); } svg.chart .grid { stroke: var(--line-2); } svg.chart .axis { stroke: var(--line); }
@@ -83,20 +84,28 @@
   .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 4px 0 16px; } .step { padding: 10px 12px; border-radius: 8px; background: var(--surface-2); border: 1px solid var(--line-2); font-size: 12px; color: var(--ink-2); } .step b { display: block; color: var(--ink); font-size: 13px; margin-bottom: 2px; }
   @media (max-width: 700px) { .steps { grid-template-columns: 1fr 1fr; } }
   form .field { display: grid; grid-template-columns: 190px 1fr; gap: 4px 16px; align-items: start; padding: 10px 0; border-bottom: 1px solid var(--line-2); } form .field:last-of-type { border-bottom: 0; }
-  form .field label { font-weight: 500; padding-top: 6px; } form .field .help { grid-column: 2; color: var(--ink-3); font-size: 12px; }
-  input, select { font: inherit; padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); width: 100%; } input:focus { outline: 2px solid var(--accent-soft); border-color: var(--accent); }
-  .inline { display: flex; gap: 8px; align-items: center; } .inline input { width: auto; flex: 1; }
+  form .field label, form .field .lbl { font-weight: 500; padding-top: 6px; } form .field .help { grid-column: 2; color: var(--ink-3); font-size: 12px; }
+  @media (max-width: 700px) { form .field { grid-template-columns: 1fr; } form .field .help { grid-column: 1; } }
+  input, select { font: inherit; padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); width: 100%; } input:focus, select:focus { outline: 2px solid var(--accent-soft); border-color: var(--accent); }
+  .inline { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; } .inline input { width: auto; flex: 1; min-width: 90px; }
+  .checks { display: flex; gap: 8px; flex-wrap: wrap; } .checks label { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; cursor: pointer; font-weight: 500; background: var(--surface); } .checks label:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); } .checks input { width: auto; margin: 0; }
+  .presets { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; } .presets button { border-style: dashed; }
+  .estimate { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; padding: 12px 14px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--line-2); margin: 14px 0; } .estimate .k { color: var(--ink-3); font-size: 11px; } .estimate .v { font-weight: 650; font-size: 16px; font-variant-numeric: tabular-nums; }
   pre.log { background: #0b0e12; color: #d7dde6; border-radius: 10px; padding: 12px 14px; font: 12px/1.55 var(--mono); max-height: 360px; overflow: auto; white-space: pre-wrap; margin: 12px 0 0; }
   .ops { list-style: none; padding: 0; margin: 0; } .ops li { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; padding: 8px 10px; border-radius: 8px; cursor: pointer; } .ops li:hover { background: var(--surface-2); } .ops li.open { background: var(--accent-soft); }
   .op-card { padding: 14px 16px; border: 1px solid var(--line-2); border-radius: 10px; background: var(--surface-2); display: grid; gap: 8px; } .op-card p { margin: 0; color: var(--ink-2); font-size: 12px; }
   .empty { padding: 28px; text-align: center; color: var(--ink-2); border: 1px dashed var(--line); border-radius: 10px; } .empty b { color: var(--ink); display: block; margin-bottom: 4px; }
   .muted { color: var(--ink-3); } .mono { font-family: var(--mono); font-size: 12px; } td.mono { white-space: nowrap; }
   .kv { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 6px 16px; font-size: 13px; } .kv .k { color: var(--ink-3); } .kv span { overflow-wrap: anywhere; }
-  .grid2 > *, .grid3 > * { min-width: 0; } .card { min-width: 0; overflow-wrap: anywhere; }
   details summary { cursor: pointer; color: var(--accent); font-size: 12px; } details pre { margin: 6px 0 0; font: 12px/1.5 var(--mono); color: var(--ink-2); white-space: pre-wrap; }
   .ring { width: 72px; height: 72px; } .ring circle { fill: none; stroke-width: 8; } .ring .track { stroke: var(--track); } .ring .val { stroke: var(--accent); stroke-linecap: round; transform: rotate(-90deg); transform-origin: 50% 50%; transition: stroke-dasharray .4s; }
   .toast { position: fixed; bottom: 18px; right: 18px; background: var(--ink); color: var(--bg); padding: 9px 14px; border-radius: 8px; font-size: 13px; opacity: 0; transform: translateY(6px); transition: all .2s; z-index: 20; } .toast.show { opacity: 1; transform: none; }
   .theme { margin-left: auto; width: 30px; height: 30px; padding: 0; display: grid; place-items: center; }
+  .jobs { display: grid; gap: 12px; } .job { display: grid; grid-template-columns: 1fr auto; gap: 8px 20px; align-items: center; padding: 16px 18px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); cursor: pointer; transition: border-color .12s; } .job:hover { border-color: var(--ink-3); }
+  .job.active { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .job .name { font-size: 15px; font-weight: 650; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; } .job .meta { color: var(--ink-2); font-size: 12px; margin-top: 2px; } .job .prog { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; font-size: 12px; color: var(--ink-2); } .job .prog .progress { margin: 0; }
+  .runs li { display: grid; grid-template-columns: auto auto 1fr auto; gap: 12px; align-items: center; padding: 8px 10px; border-radius: 8px; cursor: pointer; font-size: 13px; } .runs li:hover { background: var(--surface-2); } .runs { list-style: none; padding: 0; margin: 0; }
+  .alert { padding: 12px 14px; border-radius: 10px; border: 1px solid var(--warn); background: var(--warn-soft); color: var(--ink); margin-bottom: 18px; font-size: 13px; } .alert.bad { border-color: var(--bad); background: var(--bad-soft); } .alert b { display: block; margin-bottom: 2px; }
 </style>
 </head>
 <body>
@@ -105,13 +114,13 @@
     <div class="brand"><div class="logo"></div><div><b>Replay lab</b><small id="brand-sub">Rocket League archive</small></div></div>
     <nav id="nav">
       <a href="#overview" data-page="overview"><svg viewBox="0 0 24 24"><path d="M3 12l9-8 9 8M5 10v10h14V10"/></svg>Overview</a>
+      <a href="#jobs" data-page="jobs"><svg viewBox="0 0 24 24"><path d="M5 4h14v16H5zM9 9h6M9 13h6M9 17h3"/></svg>Jobs<span class="count" id="nav-jobs"></span></a>
       <a href="#archive" data-page="archive"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></svg>Archive<span class="count" id="nav-archive"></span></a>
       <a href="#transfers" data-page="transfers"><svg viewBox="0 0 24 24"><path d="M4 9h13l-3-3M20 15H7l3 3"/></svg>Transfers<span class="count" id="nav-transfers"></span></a>
-      <a href="#crawler" data-page="crawler"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8M12 17v4"/></svg>Crawler<span class="count" id="nav-crawler"></span></a>
       <a href="#settings" data-page="settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg>Settings</a>
     </nav>
     <div class="side-foot">
-      <div id="side-box"><span class="pulse off"></span> no crawler box</div>
+      <div id="side-box"><span class="pulse off"></span> no job running</div>
       <div><div style="display:flex;justify-content:space-between"><span>Lab disk</span><span id="side-disk" class="mono"></span></div><div class="minibar"><i id="side-disk-bar" style="width:0"></i></div></div>
       <div style="display:flex;align-items:center;gap:8px"><span id="side-updated" class="muted">connecting…</span><button class="theme" onclick="toggleTheme()" title="Switch theme">◐</button></div>
     </div>
@@ -120,7 +129,7 @@
   <main>
     <!-- OVERVIEW -->
     <section class="page" id="page-overview">
-      <div class="page-head"><div><h1>Overview</h1><p>What the archive holds and what the crawler is doing right now. Everything on this page refreshes every ten seconds.</p></div></div>
+      <div class="page-head"><div><h1>Overview</h1><p>What the archive holds and what the current job is doing. Everything on this page refreshes every ten seconds.</p></div></div>
       <div class="card hero" id="hero"></div>
       <div class="tiles" id="ov-tiles" style="margin-bottom:18px"></div>
       <div class="grid3">
@@ -128,6 +137,41 @@
         <div class="card"><h2>Archive by band</h2><div id="ov-bands"></div></div>
       </div>
       <div class="card" id="ov-guide" hidden></div>
+    </section>
+
+    <!-- JOBS -->
+    <section class="page" id="page-jobs">
+      <div class="page-head"><div><h1>Jobs</h1><p>A job is what to crawl: a playlist, rank bands, a range of months and a cap. Start one and a box is created for it; stop it and the box is pushed, validated and deleted. A stopped job continues from the ledger on a new box.</p></div><div class="actions"><button class="primary" onclick="toggleNew(true)">New job</button></div></div>
+      <div class="card" id="newjob" hidden>
+        <h2>New job</h2>
+        <div class="presets"><span class="muted" style="align-self:center;font-size:12px">Start from:</span><button type="button" onclick="applyPreset('smoke')">Smoke test · 1 month, 300 per window</button><button type="button" onclick="applyPreset('full')">Full crawl · every month, no cap</button></div>
+        <form id="jobform" onsubmit="createJob(event, false)">
+          <div class="field"><label for="j-name">Name</label><input id="j-name" placeholder="Smoke test" required maxlength="60"><div class="help">Shown everywhere this job appears.</div></div>
+          <div class="field"><label for="j-playlist">Playlist</label><input id="j-playlist" value="ranked-doubles"><div class="help">A ballchasing playlist id, such as ranked-doubles or ranked-standard.</div></div>
+          <div class="field"><span class="lbl">Rank bands</span><div><div class="checks" id="j-bands"><label><input type="checkbox" value="platinum">Platinum</label><label><input type="checkbox" value="diamond" checked>Diamond</label><label><input type="checkbox" value="champion" checked>Champion</label><label><input type="checkbox" value="gc" checked>Grand Champion</label><label><input type="checkbox" value="ssl">SSL</label></div><input id="j-bands-custom" placeholder="or custom: name:min-rank:max-rank, …" style="margin-top:8px"></div><div class="help">Each band is crawled separately and stored under its own folder. The custom field, if filled, replaces the boxes above.</div></div>
+          <div class="field"><span class="lbl">Months</span><div class="inline"><input id="j-first" placeholder="2025-07" style="max-width:120px"><span class="muted">to</span><input id="j-last" placeholder="2026-10" style="max-width:120px"></div><div class="help">Inclusive, by the month a replay was played. One window per band per month; months first, so every band advances together.</div></div>
+          <div class="field"><label for="j-cap">Cap per window</label><input id="j-cap" placeholder="no cap: everything ballchasing lists" inputmode="numeric"><div class="help">Stop a window after this many replays. With a cap the job has a known size and finishes on its own; without one it runs until every listing is exhausted.</div></div>
+          <div class="field"><label for="j-batch">Batch size</label><input id="j-batch" value="20000" inputmode="numeric"><div class="help">Replays per pushed batch. 20,000 is about 28 GB on the box; use 500 for a smoke test so a batch validates within minutes.</div></div>
+          <div class="field"><label for="j-type">Server</label><div class="inline"><select id="j-type" style="width:auto;flex:1"><option value="cpx22">cpx22 · 2 vCPU, 80 GB · about $0.03/h</option><option value="cpx32" selected>cpx32 · 4 vCPU, 160 GB · about $0.06/h</option><option value="cpx42">cpx42 · 8 vCPU, 240 GB · about $0.13/h</option></select><select id="j-location" style="width:auto"><option value="fsn1">Falkenstein</option><option value="nbg1">Nuremberg</option><option value="hel1">Helsinki</option><option value="ash">Ashburn</option><option value="hil">Hillsboro</option></select><input id="j-workers" value="4" style="max-width:70px" inputmode="numeric" data-tip="download workers"></div><div class="help">cpx32 decodes far faster than a GC key can download, so it never falls behind. The last field is the number of download workers; 4 suits a GC key.</div></div>
+          <div class="estimate" id="j-estimate"></div>
+          <div class="actions"><button class="primary" type="submit">Create job</button><button type="button" onclick="createJob(event, true)">Create and start</button><button type="button" onclick="toggleNew(false)">Cancel</button><span class="muted" id="j-status"></span></div>
+        </form>
+      </div>
+      <div class="jobs" id="joblist"></div>
+    </section>
+
+    <!-- JOB -->
+    <section class="page" id="page-job">
+      <div class="page-head"><div><h1 id="jb-title"><span class="crumb"><a href="#jobs">Jobs</a> /</span> <span id="jb-name"></span> <span id="jb-state"></span></h1><p id="jb-sub"></p></div><div class="actions" id="jb-actions"></div></div>
+      <div id="jb-alert"></div>
+      <div class="tiles" id="jb-tiles" style="margin-bottom:18px"></div>
+      <div id="jb-box"></div>
+      <div class="card"><h2>Windows <span class="hint">replays in the lab ledger per band and month; ✓ when the window is done, a pulse where the box is now</span></h2><div id="jb-windows" style="max-height:420px;overflow:auto"></div></div>
+      <div class="grid2">
+        <div class="card"><h2>Parameters</h2><div class="kv" id="jb-params"></div></div>
+        <div class="card"><h2>Batches from this job</h2><div id="jb-batches"></div></div>
+      </div>
+      <div class="card"><h2>Runs <span class="hint">each start, stop or finish of this job; click one for its log</span></h2><ul class="runs" id="jb-runs"></ul><pre class="log" id="jb-log" hidden></pre></div>
     </section>
 
     <!-- ARCHIVE -->
@@ -150,45 +194,28 @@
       <div class="card"><h2>Batches <span class="hint">newest first</span></h2><div id="tr-table"></div></div>
     </section>
 
-    <!-- CRAWLER -->
-    <section class="page" id="page-crawler">
-      <div class="page-head"><div><h1>Crawler</h1><p>The Hetzner box is disposable: it pulls the ledger from the lab when it starts, crawls and decodes, pushes batches, and is deleted when done. Pause and stop take effect within one page of replays.</p></div><div class="actions" id="cr-actions"></div></div>
-      <div id="cr-body"></div>
-      <div class="card"><h2>Operations <span class="hint">run on the lab; logs are kept under the archive's ops folder</span></h2>
-        <div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr))">
-          <div class="op-card"><b>Create box and start</b><p>Creates the server from the snapshot, hands it the keys over SSH, joins it to the tailnet and starts crawling with the settings on the Settings page. Re-running on an existing box just makes sure the service is up.</p><div><button class="primary" onclick="run('up')">Create and start</button></div></div>
-          <div class="op-card"><b>Stop, validate and delete</b><p>Asks the box to finish its page, push everything, wait for the lab to validate it, and only then deletes the server. If anything is unvalidated the server stays and the log says what.</p><div><button class="danger" onclick="run('down', 'stop the box, push and validate everything it holds, then delete the server')">Stop and delete</button></div></div>
-          <div class="op-card"><b>Rebuild the image</b><p>Builds a fresh snapshot from this repository on a throwaway server (about ten minutes). Needed after the pipeline code changes; the next box starts from it.</p><div><button onclick="run('image', 'rebuild the snapshot on a throwaway server')">Rebuild image</button></div></div>
-        </div>
-        <div style="margin-top:16px"><ul class="ops" id="ops"></ul><pre class="log" id="oplog" hidden></pre></div>
-      </div>
-    </section>
-
     <!-- SETTINGS -->
     <section class="page" id="page-settings">
-      <div class="page-head"><div><h1>Settings</h1><p>Saved to the lab's env file and used the next time a box is created. A box that is already running keeps the settings it started with.</p></div></div>
+      <div class="page-head"><div><h1>Settings</h1><p>Infrastructure only. What to crawl belongs to a job.</p></div></div>
       <div class="grid3">
         <div>
           <form id="config" class="card" onsubmit="saveConfig(event)">
-            <h2>Server</h2>
-            <div class="field"><label for="f-CRAWLER_NAME">Box name</label><input id="f-CRAWLER_NAME" name="CRAWLER_NAME"><div class="help">Also its name on the tailnet. One box per name.</div></div>
-            <div class="field"><label for="f-CRAWLER_TYPE">Server type</label><select id="f-CRAWLER_TYPE" name="CRAWLER_TYPE"><option value="cpx22">cpx22 · 2 vCPU, 4 GB, 80 GB disk (use a 10,000 batch)</option><option value="cpx32">cpx32 · 4 vCPU, 8 GB, 160 GB disk (recommended)</option><option value="cpx42">cpx42 · 8 vCPU, 16 GB, 240 GB disk</option></select><div class="help">Four cores decode about 45 replays a second against a crawl of 2 a second, so cpx32 never falls behind. Roughly 6 cents an hour.</div></div>
-            <div class="field"><label for="f-CRAWLER_LOCATION">Location</label><select id="f-CRAWLER_LOCATION" name="CRAWLER_LOCATION"><option value="fsn1">Falkenstein (fsn1)</option><option value="nbg1">Nuremberg (nbg1)</option><option value="hel1">Helsinki (hel1)</option><option value="ash">Ashburn (ash)</option><option value="hil">Hillsboro (hil)</option></select><div class="help">Any EU location is close to ballchasing's servers.</div></div>
-            <h2 style="margin-top:18px">What to crawl</h2>
-            <div class="field"><label for="f-CRAWLER_PLAYLIST">Playlist</label><input id="f-CRAWLER_PLAYLIST" name="CRAWLER_PLAYLIST"><div class="help">A ballchasing playlist id, such as ranked-doubles or ranked-standard.</div></div>
-            <div class="field"><label for="f-CRAWLER_BANDS">Rank bands</label><input id="f-CRAWLER_BANDS" name="CRAWLER_BANDS"><div class="help">Comma-separated <span class="mono">name:min-rank:max-rank</span>, for example <span class="mono">diamond:diamond-1:diamond-3</span>. Each band is crawled separately and stored under its own folder.</div></div>
-            <div class="field"><label>Months</label><div class="inline"><input id="f-months-first" placeholder="2025-07" style="max-width:120px"><span class="muted">to</span><input id="f-months-last" placeholder="2026-10" style="max-width:120px"></div><div class="help">Inclusive. One crawl window per band per month, months first so every band advances together.</div></div>
-            <div class="field"><label for="f-CRAWLER_PER_WINDOW">Cap per window</label><input id="f-CRAWLER_PER_WINDOW" name="CRAWLER_PER_WINDOW" placeholder="no cap"><div class="help">Stop a window after this many replays. Leave empty to take everything ballchasing lists.</div></div>
-            <h2 style="margin-top:18px">Pipeline</h2>
-            <div class="field"><label for="f-CRAWLER_BATCH">Batch size</label><input id="f-CRAWLER_BATCH" name="CRAWLER_BATCH"><div class="help">Replays per pushed batch. 20,000 is about 22 GB raw and 6 GB decoded on the box; the box pauses if four batches await validation.</div></div>
-            <div class="field"><label for="f-CRAWLER_WORKERS">Download workers</label><input id="f-CRAWLER_WORKERS" name="CRAWLER_WORKERS"><div class="help">Concurrent downloads. The ballchasing rate limits still apply; 4 suits a GC key.</div></div>
-            <div class="actions" style="margin-top:14px"><button class="primary" type="submit">Save settings</button><span class="muted" id="cfg-status"></span></div>
+            <h2>Box</h2>
+            <div class="field"><label for="f-CRAWLER_NAME">Box name</label><input id="f-CRAWLER_NAME" name="CRAWLER_NAME"><div class="help">The Hetzner server and tailnet name. One box at a time.</div></div>
+            <div class="field"><label for="f-CRAWLER_TYPE">Default server type</label><select id="f-CRAWLER_TYPE" name="CRAWLER_TYPE"><option value="cpx22">cpx22 · 2 vCPU, 4 GB, 80 GB disk</option><option value="cpx32">cpx32 · 4 vCPU, 8 GB, 160 GB disk</option><option value="cpx42">cpx42 · 8 vCPU, 16 GB, 240 GB disk</option></select><div class="help">Used when a job does not say otherwise.</div></div>
+            <div class="field"><label for="f-CRAWLER_LOCATION">Default location</label><select id="f-CRAWLER_LOCATION" name="CRAWLER_LOCATION"><option value="fsn1">Falkenstein (fsn1)</option><option value="nbg1">Nuremberg (nbg1)</option><option value="hel1">Helsinki (hel1)</option><option value="ash">Ashburn (ash)</option><option value="hil">Hillsboro (hil)</option></select><div class="help">Any EU location is close to ballchasing's servers.</div></div>
+            <div class="actions" style="margin-top:14px"><button class="primary" type="submit">Save</button><span class="muted" id="cfg-status"></span></div>
           </form>
+          <div class="card"><h2>Crawler image <span class="hint">the snapshot every box boots from</span></h2>
+            <p style="margin:0 0 12px;color:var(--ink-2);font-size:13px">Builds a fresh snapshot from this repository on a throwaway server, about ten minutes. Needed after the pipeline code changes; the next box starts from it and older snapshots are deleted.</p>
+            <div class="actions"><button onclick="run('image', 'rebuild the snapshot on a throwaway server')">Rebuild image</button></div>
+            <div style="margin-top:16px"><h2>Operations <span class="hint">logs are kept under the archive's ops folder</span></h2><ul class="ops" id="ops"></ul><pre class="log" id="oplog" hidden></pre></div>
+          </div>
         </div>
         <div>
           <div class="card"><h2>Secrets</h2><div id="secrets" style="display:grid;gap:8px"></div><p class="muted" style="font-size:12px;margin:12px 0 0">These live only in <span class="mono">/etc/rlreplay/lab.env</span> on the lab. The page can tell whether each is set, never what it is. A box receives them over SSH when it is created and never writes them anywhere a snapshot or log could keep.</p></div>
           <div class="card"><h2>Lab</h2><div class="kv" id="lab-facts"></div></div>
-          <div class="card"><h2>First run</h2><ol style="margin:0;padding-left:18px;color:var(--ink-2);font-size:13px;line-height:1.7"><li>Fill the three secrets in the env file.</li><li>Rebuild the image once (Crawler page).</li><li>Set months to one month and batch size to 500, then Create and start.</li><li>Watch one batch validate on Transfers, then Stop and delete.</li><li>Restore the real months and batch size and start the full run.</li></ol></div>
+          <div class="card"><h2>First run</h2><ol style="margin:0;padding-left:18px;color:var(--ink-2);font-size:13px;line-height:1.7"><li>Fill the three secrets in the env file.</li><li>Rebuild the image once.</li><li>On Jobs, create the <b>Smoke test</b> preset and start it.</li><li>Watch its first batch validate, then stop it; the box is deleted for you.</li><li>Create the <b>Full crawl</b> and start it.</li></ol></div>
         </div>
       </div>
     </section>
@@ -209,23 +236,33 @@ const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "
 const monthLabel = (m) => `${MONTHS[+m.slice(5, 7) - 1]} ${m.slice(0, 4)}`;
 const title = (s) => s ? s[0].toUpperCase() + s.slice(1) : s;
 const bandName = (b) => ({gc: "Grand Champion", ssl: "Supersonic Legend"}[b] || title(b));
-let state = null, openOp = null, page = location.hash.slice(1) || "overview";
+const STATE = {draft: ["muted", "Draft"], running: ["good", "Running"], paused: ["warn", "Paused"], stopping: ["warn", "Stopping"], finishing: ["warn", "Finishing"], stopped: ["muted", "Stopped"], complete: ["good", "Complete"], failed: ["bad", "Failed"]};
+const stateChip = (s) => { const [k, l] = STATE[s] || ["muted", s]; return `<span class="chip ${k}">${l}</span>`; };
+let state = null, openOp = null, page = "overview", jobId = null, jobData = null, openRun = null, jobTimer = null;
 
 // ---- theme, routing, toast, tooltip ----
 function toggleTheme() { const r = document.documentElement, cur = r.dataset.theme || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"); r.dataset.theme = cur === "dark" ? "light" : "dark"; try { localStorage.setItem("lab-theme", r.dataset.theme); } catch (e) {} }
 try { const t = localStorage.getItem("lab-theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
-function showPage(p) { page = ["overview", "archive", "transfers", "crawler", "settings"].includes(p) ? p : "overview"; document.querySelectorAll(".page").forEach(s => s.classList.toggle("active", s.id === "page-" + page)); document.querySelectorAll("#nav a").forEach(a => a.classList.toggle("active", a.dataset.page === page)); }
-window.addEventListener("hashchange", () => showPage(location.hash.slice(1)));
-showPage(page);
-function toast(msg, bad) { const t = $("#toast"); t.textContent = msg; t.style.background = bad ? "var(--bad)" : "var(--ink)"; t.style.color = bad ? "#fff" : "var(--bg)"; t.classList.add("show"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), 3200); }
+function route() {
+  const h = location.hash.slice(1) || "overview";
+  if (h.startsWith("job/")) { page = "job"; jobId = decodeURIComponent(h.slice(4)); loadJob(); }
+  else if (h === "jobs/new") { page = "jobs"; jobId = null; }
+  else { page = ["overview", "jobs", "archive", "transfers", "settings"].includes(h) ? h : "overview"; jobId = null; }
+  document.querySelectorAll(".page").forEach(s => s.classList.toggle("active", s.id === "page-" + page));
+  document.querySelectorAll("#nav a").forEach(a => a.classList.toggle("active", a.dataset.page === page || (page === "job" && a.dataset.page === "jobs")));
+  if (h === "jobs/new") toggleNew(true);
+}
+window.addEventListener("hashchange", route);
+function toast(msg, bad) { const t = $("#toast"); t.textContent = msg; t.style.background = bad ? "var(--bad)" : "var(--ink)"; t.style.color = bad ? "#fff" : "var(--bg)"; t.classList.add("show"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), 3600); }
 const tip = $("#tip");
 document.addEventListener("mousemove", (e) => { const el = e.target.closest("[data-tip]"); if (el) { tip.textContent = el.dataset.tip; tip.style.opacity = 1; tip.style.left = Math.min(e.clientX + 12, innerWidth - tip.offsetWidth - 8) + "px"; tip.style.top = (e.clientY + 14) + "px"; } else tip.style.opacity = 0; });
 async function api(path, body) { const r = await fetch(path, body ? {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)} : {}); const j = await r.json(); if (!r.ok) throw new Error(j.error || r.statusText); return j; }
 const ago = (s) => s == null ? "never" : s < 60 ? `${s} s ago` : s < 5400 ? `${Math.round(s / 60)} min ago` : `${(s / 3600).toFixed(1)} h ago`;
 const when = (iso) => { if (!iso) return ""; const d = (Date.now() - Date.parse(iso)) / 1000; return d >= 0 && d < 86400 ? ago(Math.round(d)) : iso.slice(0, 16).replace("T", " "); };
+const hours = (h) => h == null ? "open-ended" : h < 1 ? `${Math.round(h * 60)} min` : h < 48 ? `${h.toFixed(1)} h` : `${(h / 24).toFixed(1)} days`;
 
 // ---- derived ----
-function phaseKind(s) { if (!s) return "off"; const p = s.phase || ""; if (p.startsWith("crawling") || p.startsWith("decoding")) return "good"; if (p === "paused" || p.startsWith("waiting")) return "warn"; if (p === "all windows complete" || p === "stopped") return "off"; return "muted"; }
+function phaseKind(s) { if (!s) return "off"; const p = s.phase || ""; if (p.startsWith("crawling") || p.startsWith("decoding")) return "good"; if (p === "paused" || p.startsWith("waiting")) return "warn"; if (p.startsWith("decoder failing")) return "bad"; if (p === "all windows complete" || p === "stopped") return "off"; return "muted"; }
 function phaseSentence(b) {
   const s = b.status; if (!s) return ["No status from the box yet", "It reports every half minute once the service is up."];
   const p = s.phase, m = p.match(/^(crawling|decoding) [^/]+\/([^/]+)\/(\d{4}-\d{2})$/);
@@ -233,45 +270,65 @@ function phaseSentence(b) {
   if (p === "paused") return ["Paused", "The box keeps validating and cleaning up; it will not fetch until you resume."];
   if (p === "waiting for validation") return ["Waiting for the lab to validate", `${s.unvalidated.length} batches are pushed but not yet confirmed; crawling resumes once one clears.`];
   if (p === "waiting for disk") return ["Waiting for disk space", "The box is near its free-space floor; it resumes when validated batches are cleaned."];
-  if (p === "all windows complete") return ["Every window is complete", "Nothing more to fetch for the configured months. Stop and delete the box when the last batch validates."];
+  if (p === "all windows complete") return ["Every window is complete", "The job is finishing: the last batch is pushed and validated, then the box is deleted."];
+  if (p.startsWith("decoder failing")) return ["Decoder failing on the box", p.slice("decoder failing: ".length) + " · nothing was written off; stop the job, rebuild the image, continue."];
   if (p === "final push" || p === "stopping") return ["Stopping", "Sealing the last batch and pushing it to the lab."];
-  if (p === "stopped") return ["Stopped", "The service has exited. Create and start to resume from the ledger."];
+  if (p === "stopped") return ["Box service exited", "The crawler service on the box has stopped. Stop the job to delete the box, then continue it."];
   return [title(p), ""];
 }
+function jobSentence(j, box) {
+  const b = box && box.status && box.status.job === j.id ? box : null;
+  if (j.state === "running" && b) return phaseSentence(b);
+  if (j.state === "running") return ["Starting a box", "Creating the server, handing it the keys, joining the tailnet. The first status arrives a few minutes after that."];
+  if (j.state === "paused") return ["Paused", "The box is up and idle. Resume to continue, or stop to push, validate and delete it."];
+  if (j.state === "stopping") return ["Stopping", "The box pushes what it holds, the lab validates it, then the server is deleted."];
+  if (j.state === "finishing") return ["Finishing", "Every window reached its target. The final batch is being pushed and validated, then the box is deleted."];
+  if (j.state === "stopped") return ["Stopped", "No box. Continue to start a new one from where the ledger stands, or cancel to remove the job."];
+  if (j.state === "complete") return ["Complete", "Every window is done and the box is gone."];
+  if (j.state === "failed") return ["Needs attention", (j.last_run || j.runs?.at?.(-1))?.outcome || "The last script failed; see its log below."];
+  return ["Draft", "Not started yet."];
+}
+const activeBox = (o) => o.boxes.find(b => b.name === o.box_name) || o.boxes[0];
 
-// ---- render ----
+// ---- render overview & shared pages ----
 function render(o) {
   state = o;
   const bands = [...new Set(o.windows.map(w => w.band))].sort((a, b) => bandRank(a) - bandRank(b) || a.localeCompare(b));
   const months = [...new Set(o.windows.map(w => w.month))].sort();
-  const box = o.boxes[0];
+  const box = activeBox(o), active = o.jobs.find(j => j.id === o.active_job);
   const complete = o.windows.filter(w => w.listing_complete).length;
   const validated = o.batches.filter(b => b.validated), pending = o.batches.filter(b => !b.validated && !b.problems), bad = o.batches.filter(b => b.problems);
 
   // sidebar
   $("#side-updated").textContent = "updated " + o.now.slice(11, 19) + " UTC";
-  $("#nav-archive").textContent = n(o.totals.replays); $("#nav-transfers").textContent = o.batches.length ? `${pending.length || ""}${bad.length ? " · " + bad.length + " bad" : ""}` : ""; $("#nav-crawler").textContent = box?.status ? box.status.per_minute + "/min" : "";
+  $("#nav-archive").textContent = n(o.totals.replays); $("#nav-transfers").textContent = o.batches.length ? `${pending.length || ""}${bad.length ? " · " + bad.length + " bad" : ""}` : ""; $("#nav-jobs").textContent = active ? "1 active" : o.jobs.length ? `${o.jobs.length}` : "";
   if (o.disk) { $("#side-disk").textContent = gb(o.disk.free) + " free"; $("#side-disk-bar").style.width = (100 * (1 - o.disk.free / o.disk.total)).toFixed(1) + "%"; }
-  const kind = box?.status && box.status_age_s < 300 ? phaseKind(box.status) : "off";
-  $("#side-box").innerHTML = `<span class="pulse ${kind}"></span> ${box ? esc(box.name) + (box.status ? ` · ${esc(box.status.phase.split(" ")[0])}` : "") : "no crawler box"}`;
+  const kind = active ? (box?.status && box.status.job === active.id && box.status_age_s < 300 ? phaseKind(box.status) : active.state === "paused" ? "warn" : "muted") : "off";
+  $("#side-box").innerHTML = `<span class="pulse ${kind}"></span> ${active ? esc(active.name) + " · " + esc(active.state) : "no job running"}`;
   $("#brand-sub").textContent = `${n(o.totals.replays)} replays`;
 
-  // overview
-  const [headline, sub] = box ? phaseSentence(box) : ["No crawler box", "Create one from the Crawler page when the secrets and the image are in place."];
-  const stale = box?.status && box.status_age_s > 300;
-  $("#hero").innerHTML = `<div><div class="state"><span class="pulse ${kind}"></span>${esc(headline)}${stale ? ` <span class="chip warn">last report ${ago(box.status_age_s)}</span>` : ""}</div><div class="sub">${esc(sub)}</div></div>
-    <div class="actions">${box?.status ? controlButtons(box) : `<button class="primary" onclick="location.hash='crawler'">Go to Crawler</button>`}</div>`;
+  // overview hero
+  const [headline, sub] = active ? jobSentence(active, box) : ["No job running", o.jobs.length ? "Pick a job to start or continue, or create a new one." : "Create the first job. The smoke test preset is a good first run."];
+  const stale = active && box?.status && box.status.job === active.id && box.status_age_s > 300;
+  $("#hero").innerHTML = `<div><div class="state"><span class="pulse ${kind}"></span>${active ? `<a href="#job/${esc(active.id)}" style="color:inherit">${esc(active.name)}</a> <span class="muted" style="font-weight:400">·</span> ` : ""}${esc(headline)}${stale ? ` <span class="chip warn">last report ${ago(box.status_age_s)}</span>` : ""}</div><div class="sub">${esc(sub)}</div>${active ? progressLine(active) : ""}</div>
+    <div class="actions">${active ? jobButtons(active, true) : `<button class="primary" onclick="location.hash='jobs'">${o.jobs.length ? "Go to Jobs" : "Create a job"}</button>`}</div>`;
   $("#ov-tiles").innerHTML = tile("Replays in the ledger", n(o.totals.replays), `${n(o.totals.decoded)} decoded on disk · ${gb(o.totals.bytes)}`) +
     tile("Windows complete", `${complete}<small> / ${o.windows.length}</small>`, `<div class="progress"><i style="width:${o.windows.length ? (100 * complete / o.windows.length).toFixed(1) : 0}%"></i></div>${o.windows.length - complete} still open`) +
     tile("Batches", `${n(validated.length)}<small> validated</small>`, `${pending.length} pending${bad.length ? ` · <span style="color:var(--bad)">${bad.length} bad</span>` : ""} · ${gb(validated.reduce((a, b) => a + b.bytes, 0))} confirmed`) +
     tile("Lab disk", gb(o.disk?.free || 0), `free of ${gb(o.disk?.total || 0)}`);
-  $("#ov-rate").innerHTML = box?.history?.length > 1 ? rateChart(box.history) : `<div class="empty">No rate history yet. Points appear as the box reports.</div>`;
+  const hist = (box?.history || []).filter(h => !active || h.job === active.id || !h.job);
+  $("#ov-rate").innerHTML = hist.length > 1 ? rateChart(hist) : `<div class="empty">No rate history yet. Points appear as the box reports.</div>`;
   $("#ov-bands").innerHTML = bands.length ? `<table>${bands.map((b, i) => { const ws = o.windows.filter(w => w.band === b); const tot = ws.reduce((a, w) => a + w.replays, 0); return `<tr><td><i style="display:inline-block;width:10px;height:10px;border-radius:3px;background:${bandColor(i)};margin-right:8px;vertical-align:-1px"></i>${esc(bandName(b))}</td><td class="num">${n(tot)}</td><td class="num muted">${ws.filter(w => w.listing_complete).length}/${ws.length} months</td></tr>`; }).join("")}</table>` : `<div class="empty">Nothing in the ledger yet.</div>`;
   const guide = [];
   if (!Object.values(o.secrets).every(Boolean)) guide.push(`Fill the missing secrets in the lab env file (${Object.entries(o.secrets).filter(([k, v]) => !v).map(([k]) => k).join(", ")}).`);
-  if (!box) guide.push("Rebuild the image once, then create the first box from the Crawler page. A smoke test with one month and a 500 batch is a good first run.");
-  if (bad.length) guide.push(`${bad.length} batch${bad.length > 1 ? "es" : ""} failed validation. The box will push and validate again on its own; look at Transfers for the reason.`);
+  if (!o.jobs.length) guide.push("Rebuild the image once (Settings), then create the Smoke test job and start it.");
+  if (bad.length) guide.push(`${bad.length} batch${bad.length > 1 ? "es" : ""} failed validation. The box retries on its own; Transfers has the reason.`);
+  const failed = o.jobs.find(j => j.state === "failed"); if (failed) guide.push(`'${failed.name}' needs attention: ${failed.last_run?.outcome || "its last script failed"}.`);
   $("#ov-guide").hidden = !guide.length; $("#ov-guide").innerHTML = `<h2>Suggested next steps</h2><ol style="margin:0;padding-left:18px;color:var(--ink-2);line-height:1.8">${guide.map(g => `<li>${esc(g)}</li>`).join("")}</ol>`;
+
+  // jobs list
+  if (!$("#newjob").hidden && !$("#j-first").value) toggleNew(true);   // the form opened before the first poll
+  $("#joblist").innerHTML = o.jobs.length ? o.jobs.map(j => jobCard(j, o)).join("") : `<div class="empty"><b>No jobs yet</b>Create one above. The Smoke test preset crawls one month with a 300-replay cap per window, so the whole path from crawl to validated batch runs in about fifteen minutes.</div>`;
 
   // archive
   $("#ar-legend").innerHTML = bands.map((b, i) => `<span><i style="background:${bandColor(i)}"></i>${esc(bandName(b))}</span>`).join("");
@@ -283,42 +340,121 @@ function render(o) {
     `<tr class="total"><td>all months</td>${bands.map(b => `<td>${n(o.windows.filter(w => w.band === b).reduce((a, w) => a + w.replays, 0))}</td>`).join("")}<td class="num">${n(o.totals.replays)}</td></tr></tbody></table>` : "";
 
   // transfers
+  const jobName = (id) => o.jobs.find(j => j.id === id)?.name || id || "—";
   $("#tr-tiles").innerHTML = tile("Validated", n(validated.length), `${gb(validated.reduce((a, b) => a + b.bytes, 0))} · ${n(validated.reduce((a, b) => a + b.count, 0))} replays confirmed on the lab`) + tile("Pending", n(pending.length), pending.length ? "pushed or pushing; the lab validates within minutes" : "nothing in flight") + tile("Failed validation", n(bad.length), bad.length ? "the box retries these after ten minutes" : "none") + tile("Failed decodes", n(o.batches.reduce((a, b) => a + b.failed, 0)), "replays neither decoder could read; never refetched");
-  $("#tr-table").innerHTML = o.batches.length ? `<table><thead><tr><th>batch</th><th>created</th><th class="num">replays</th><th class="num">size</th><th>windows</th><th>status</th></tr></thead><tbody>` + o.batches.map(b => `<tr><td class="mono">${esc(b.name)}</td><td data-tip="${esc(b.created)}">${when(b.created)}</td><td class="num">${n(b.count)}${b.failed ? ` <span class="muted" data-tip="replays neither decoder could read">(${b.failed} failed)</span>` : ""}</td><td class="num">${gb(b.bytes)}</td><td class="muted">${esc(b.windows.map(w => w.replace("/", " ")).join(", "))}</td><td>${b.validated ? `<span class="chip good" data-tip="validated ${esc(b.validated)}">✓ validated</span>` : b.problems ? `<span class="chip bad">✕ failed</span> <details><summary>why</summary><pre>${esc(b.problems.map(p => JSON.stringify(p)).join("\n"))}</pre></details>` : `<span class="chip warn">… pending</span>`}</td></tr>`).join("") + "</tbody></table>" : `<div class="empty"><b>No batches yet</b>The first one appears when the box has decoded a full batch, or when it stops.</div>`;
-
-  // crawler
-  $("#cr-actions").innerHTML = box?.status ? controlButtons(box) : "";
-  $("#cr-body").innerHTML = box ? crawlerBody(box) : `<div class="card"><div class="empty"><b>No crawler box has reported yet</b>Create one below. It appears here as soon as it sends its first status.</div></div>`;
-  $("#ops").innerHTML = o.ops.slice().reverse().map(op => `<li class="${op.id === openOp ? "open" : ""}" onclick="showLog('${op.id}')"><span class="chip ${op.returncode == null ? "warn" : op.returncode === 0 ? "good" : "bad"}">${op.returncode == null ? "running" : op.returncode === 0 ? "done" : "failed"}</span><span>${esc({up: "Create and start", down: "Stop and delete", image: "Rebuild image"}[op.action] || op.action)} <span class="muted mono">${esc(op.args.join(" "))}</span></span><span class="muted">${when(op.started)}</span></li>`).join("") || `<li class="muted" style="cursor:default;grid-template-columns:1fr">No operations run from here yet.</li>`;
-  if (openOp) showLog(openOp, true);
+  $("#tr-table").innerHTML = o.batches.length ? `<table><thead><tr><th>batch</th><th>job</th><th>created</th><th class="num">replays</th><th class="num">size</th><th>windows</th><th>status</th></tr></thead><tbody>` + o.batches.map(b => `<tr><td class="mono">${esc(b.name)}</td><td>${b.job ? `<a href="#job/${esc(b.job)}">${esc(jobName(b.job))}</a>` : "—"}</td><td data-tip="${esc(b.created)}">${when(b.created)}</td><td class="num">${n(b.count)}${b.failed ? ` <span class="muted" data-tip="replays neither decoder could read">(${b.failed} failed)</span>` : ""}</td><td class="num">${gb(b.bytes)}</td><td class="muted">${esc(b.windows.map(w => w.replace("/", " ")).join(", "))}</td><td>${batchChip(b)}</td></tr>`).join("") + "</tbody></table>" : `<div class="empty"><b>No batches yet</b>The first one appears when the box has decoded a full batch, or when a job stops.</div>`;
 
   // settings
-  if (!document.activeElement?.closest?.("#config")) {
-    for (const k of ["CRAWLER_NAME", "CRAWLER_TYPE", "CRAWLER_LOCATION", "CRAWLER_PLAYLIST", "CRAWLER_BANDS", "CRAWLER_PER_WINDOW", "CRAWLER_BATCH", "CRAWLER_WORKERS"]) { const el = $("#f-" + k); if (el) { if (el.tagName === "SELECT" && ![...el.options].some(x => x.value === o.config[k])) el.add(new Option(o.config[k], o.config[k])); el.value = o.config[k]; } }
-    const [first, last] = (o.config.CRAWLER_MONTHS || "..").split(".."); $("#f-months-first").value = first || ""; $("#f-months-last").value = last || "";
-  }
+  if (!document.activeElement?.closest?.("#config")) for (const k of ["CRAWLER_NAME", "CRAWLER_TYPE", "CRAWLER_LOCATION"]) { const el = $("#f-" + k); if (el) { if (el.tagName === "SELECT" && o.config[k] && ![...el.options].some(x => x.value === o.config[k])) el.add(new Option(o.config[k], o.config[k])); el.value = o.config[k]; } }
   $("#secrets").innerHTML = Object.entries(o.secrets).map(([k, v]) => `<div style="display:flex;justify-content:space-between;align-items:center"><span class="mono">${k}</span><span class="chip ${v ? "good" : "bad"}">${v ? "set" : "missing"}</span></div>`).join("");
   $("#lab-facts").innerHTML = [["archive root", o.root], ["push user", o.config.LAB_USER], ["tailnet address", o.config.LAB_TS_HOST], ["Hetzner ssh key", o.config.HCLOUD_SSH_KEY], ["repository", o.config.LAB_REPO]].map(([k, v]) => `<span class="k">${k}</span><span class="mono">${esc(v)}</span>`).join("");
+  $("#ops").innerHTML = o.ops.slice().reverse().map(op => `<li class="${op.id === openOp ? "open" : ""}" onclick="showLog('${op.id}')"><span class="chip ${op.returncode == null ? "warn" : op.returncode === 0 ? "good" : "bad"}">${op.returncode == null ? "running" : op.returncode === 0 ? "done" : "failed"}</span><span>${esc({up: "Start box", down: "Stop box", image: "Rebuild image"}[op.action] || op.action)} <span class="muted mono">${esc(op.args.join(" "))}</span>${op.job ? ` <a href="#job/${esc(op.job)}" class="muted" onclick="event.stopPropagation()">${esc(jobName(op.job))}</a>` : ""}</span><span class="muted">${when(op.started)}</span></li>`).join("") || `<li class="muted" style="cursor:default;grid-template-columns:1fr">No operations run from here yet.</li>`;
+  if (openOp) showLog(openOp, true);
+  if (page === "job" && jobData) renderJob(jobData);
 }
 const tile = (k, v, s) => `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s}</div></div>`;
-function controlButtons(b) { const c = b.control?.command || "run"; return `${c === "pause" ? `<button class="primary" onclick="control('${esc(b.name)}','run')">Resume crawling</button>` : `<button onclick="control('${esc(b.name)}','pause')">Pause</button>`}<button class="danger" onclick="control('${esc(b.name)}','stop')" data-tip="finish the page, seal and push the current batch, then exit; the server stays until you delete it">Stop</button>`; }
-function crawlerBody(b) {
-  const s = b.status; if (!s) return `<div class="card"><div class="empty"><b>${esc(b.name)} has not reported yet</b>control is set to <span class="mono">${esc(b.control?.command || "run")}</span></div></div>`;
-  const pct = Math.min(100, 100 * s.current.count / s.batch_size), used = 1 - s.disk.free / s.disk.total, r = 30, C = 2 * Math.PI * r;
-  const win = s.windows || [];
-  return `<div class="card"><div class="hero"><div><div class="state"><span class="pulse ${phaseKind(s)}"></span>${esc(phaseSentence(b)[0])}</div><div class="sub">${esc(phaseSentence(b)[1])}</div></div><div class="muted" style="text-align:right;font-size:12px">reported ${ago(b.status_age_s)}<br>up ${(s.uptime_s / 3600).toFixed(1)} h · control: <b>${esc(b.control?.command || "run")}</b></div></div>
-    <div class="tiles" style="margin-top:16px">
-      ${tile("Rate", `${s.per_minute}<small> /min</small>`, `${n(s.saved_this_run)} replays this run`)}
+const batchChip = (b) => b.validated ? `<span class="chip good" data-tip="validated ${esc(b.validated)}">✓ validated</span>` : b.problems ? `<span class="chip bad">✕ failed</span> <details><summary>why</summary><pre>${esc(b.problems.map(p => JSON.stringify(p)).join("\n"))}</pre></details>` : `<span class="chip warn">… pending</span>`;
+function progressLine(j) { const p = j.progress; const pct = (100 * p.fraction).toFixed(1); return `<div class="prog" style="margin-top:10px;display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;font-size:12px;color:var(--ink-2)"><div class="progress ${j.state === "complete" ? "good" : ""}" style="margin:0"><i style="width:${pct}%"></i></div><span>${p.target ? `${n(Math.min(p.replays, p.target))} of ${n(p.target)} replays` : `${p.windows_done} of ${p.estimate.windows} windows done · ${n(p.replays)} replays`}</span></div>`; }
+function jobCard(j, o) {
+  const p = j.params, e = j.progress.estimate;
+  const bands = p.bands.split(",").map(b => bandName(b.split(":")[0])).join(", ");
+  return `<div class="job ${j.id === o.active_job ? "active" : ""}" onclick="location.hash='job/${esc(j.id)}'">
+    <div><div class="name">${esc(j.name)} ${stateChip(j.state)}</div><div class="meta">${esc(p.playlist)} · ${esc(bands)} · ${monthLabel(p.months.first)}${p.months.first !== p.months.last ? " to " + monthLabel(p.months.last) : ""} · ${p.per_window ? n(p.per_window) + " per window" : "no cap"} · ${e.windows} windows${j.last_run ? ` · last ${esc(j.last_run.action === "up" ? "started" : "stopped")} ${when(j.last_run.started)}` : ""}</div></div>
+    <div class="actions" onclick="event.stopPropagation()">${jobButtons(j, false)}</div>
+    ${progressLine(j)}</div>`;
+}
+function jobButtons(j, compact) {
+  const id = esc(j.id), b = [];
+  if (j.state === "draft") b.push(`<button class="primary" onclick="jobAct('${id}','start')">Start</button>`);
+  if (j.state === "stopped" || j.state === "failed") b.push(`<button class="primary" onclick="jobAct('${id}','start')">Continue</button>`);
+  if (j.state === "running") b.push(`<button onclick="jobAct('${id}','pause')">Pause</button>`);
+  if (j.state === "paused") b.push(`<button class="primary" onclick="jobAct('${id}','resume')">Resume</button>`);
+  if (["running", "paused"].includes(j.state)) b.push(`<button class="danger" onclick="jobAct('${id}','stop','stop the job: the box pushes and validates what it holds, then the server is deleted')">Stop</button>`);
+  if (j.state === "failed") b.push(`<button class="danger" onclick="jobAct('${id}','stop','try a clean stop of the box again')">Stop box</button><button class="danger" onclick="jobAct('${id}','force_stop','delete the box even if its last push failed; unpushed replays on it are lost and will be fetched again')">Force stop</button>`);
+  if (["stopping", "finishing"].includes(j.state)) b.push(`<button disabled>${title(j.state)}…</button>`);
+  if (!compact && ["draft", "stopped", "complete", "failed"].includes(j.state)) b.push(`<button class="small" onclick="jobAct('${id}','cancel','remove this job (the archive keeps everything it collected)')">${j.state === "complete" ? "Remove" : "Cancel"}</button>`);
+  if (compact) b.push(`<button onclick="location.hash='job/${id}'">Open job</button>`);
+  return b.join("");
+}
+
+// ---- job page ----
+async function loadJob() { if (!jobId) return; try { jobData = await api(`/api/job?id=${encodeURIComponent(jobId)}`); renderJob(jobData); } catch (e) { $("#jb-name").textContent = jobId; $("#jb-sub").textContent = e.message; } }
+function renderJob(d) {
+  const j = d.job, p = d.progress, box = d.box, summary = {...j, progress: p, last_run: j.runs.at(-1)};
+  $("#jb-name").textContent = j.name; $("#jb-state").innerHTML = stateChip(j.state);
+  const [headline, sub] = jobSentence(summary, box ? {...box} : d.box_any);
+  $("#jb-sub").innerHTML = `<b>${esc(headline)}</b> · ${esc(sub)}`;
+  $("#jb-actions").innerHTML = jobButtons(summary, false);
+  const lastRun = j.runs.at(-1), alerts = [];
+  if (j.state === "failed" && lastRun) alerts.push(["bad", "The last step failed", `${esc(lastRun.outcome || "")}. The log is under Runs below.`]);
+  if (j.state === "running" && box && box.status.phase === "stopped") alerts.push(["warn", "The crawler service on the box has exited", "The box is still billing. Stop the job to push what it holds and delete it, then Continue."]);
+  if (j.state === "running" && box && box.status.phase.startsWith("decoder failing")) alerts.push(["bad", "The decoder is failing on the box", "Nothing was written off. Stop the job, rebuild the image from Settings, then Continue."]);
+  if (j.state === "running" && box && box.status_age_s > 600) alerts.push(["warn", `No report from the box for ${ago(box.status_age_s)}`, "It reports every half minute while the service runs."]);
+  if (j.state === "running" && !box && d.box_any?.status && d.box_any.status.job && d.box_any.status.job !== j.id) alerts.push(["warn", "The box is reporting for a different job", `Its status names '${esc(d.box_any.status.job)}'. Stop that job first.`]);
+  $("#jb-alert").innerHTML = alerts.map(([k, t, s]) => `<div class="alert ${k}"><b>${t}</b>${s}</div>`).join("");
+  const s = box?.status, e = p.estimate, validated = d.batches.filter(b => b.validated);
+  $("#jb-tiles").innerHTML = tile("Progress", p.target ? `${(100 * p.fraction).toFixed(0)}<small>%</small>` : `${p.windows_done}<small> / ${e.windows} windows</small>`, `<div class="progress ${j.state === "complete" ? "good" : ""}"><i style="width:${(100 * p.fraction).toFixed(1)}%"></i></div>${p.target ? `${n(p.replays)} of ${n(p.target)} replays` : `${n(p.replays)} replays so far`}`) +
+    tile("Rate", s ? `${s.per_minute}<small> /min</small>` : `—`, s ? `${n(s.saved_this_run)} this box · batch ${n(s.current.count)} of ${n(s.batch_size)}` : j.state === "running" ? "waiting for the box's first report" : "no box") +
+    tile("Batches", `${validated.length}<small> validated</small>`, `${d.batches.length - validated.length} pending or failed · ${gb(validated.reduce((a, b) => a + b.bytes, 0))} on the lab`) +
+    tile("Expected", e.hours == null ? "open-ended" : hours(e.hours), e.max_replays ? `up to ${n(e.max_replays)} replays · about $${e.cost_usd.toFixed(2)} of server time` : `${e.windows} windows until each listing is exhausted · $${e.price_per_hour.toFixed(3)}/h`);
+  $("#jb-box").innerHTML = s ? boxCard(box) : "";
+  // windows grid
+  const bands = [...new Set(p.windows.map(w => w.band))].sort((a, b) => bandRank(a) - bandRank(b)), months = [...new Set(p.windows.map(w => w.month))].sort();
+  const cur = s && (s.phase.match(/^(?:crawling|decoding) [^/]+\/([^/]+)\/(\d{4}-\d{2})$/) || []);
+  const cell = (m, b, i) => { const w = p.windows.find(x => x.month === m && x.band === b); if (!w) return `<td class="muted">—</td>`; const max = w.target || Math.max(1, ...p.windows.map(x => x.replays)); const live = cur && cur[1] === b && cur[2] === m; return `<td><div class="cell" data-tip="${n(w.decoded)} decoded · ${gb(w.bytes)}${w.listing_complete ? " · listing complete" : ""}${w.target ? " · target " + n(w.target) : ""}"><div class="spark"><i style="width:${Math.min(100, 100 * w.replays / max).toFixed(1)}%;background:${bandColor(i)}"></i></div><b>${n(w.replays)}</b><span class="tick">${w.done ? "✓" : live ? `<span class="pulse" style="width:6px;height:6px"></span>` : "&nbsp;"}</span></div></td>`; };
+  $("#jb-windows").innerHTML = `<table><thead><tr><th>month</th>${bands.map(b => `<th>${esc(bandName(b))}</th>`).join("")}</tr></thead><tbody>${months.map(m => `<tr><td style="white-space:nowrap">${monthLabel(m)}</td>${bands.map((b, i) => cell(m, b, i)).join("")}</tr>`).join("")}</tbody></table>`;
+  $("#jb-params").innerHTML = [["playlist", j.params.playlist], ["bands", j.params.bands.split(",").map(b => b.split(":")[0]).join(", ")], ["months", `${j.params.months.first} to ${j.params.months.last}`], ["cap per window", j.params.per_window ? n(j.params.per_window) : "none"], ["batch size", n(j.params.batch_size)], ["workers", j.params.workers], ["server", `${j.params.server_type} in ${j.params.location}`], ["created", when(j.created)], ["id", j.id]].map(([k, v]) => `<span class="k">${k}</span><span>${esc(v)}</span>`).join("");
+  $("#jb-batches").innerHTML = d.batches.length ? `<table>${d.batches.map(b => `<tr><td class="mono">${esc(b.name)}</td><td class="num">${n(b.count)}</td><td>${batchChip(b)}</td></tr>`).join("")}</table>` : `<div class="muted">None yet. A batch is sealed every ${n(j.params.batch_size)} replays, or when the job stops.</div>`;
+  $("#jb-runs").innerHTML = j.runs.length ? j.runs.slice().reverse().map(r => `<li class="${r.op === openRun ? "open" : ""}" onclick="showRunLog('${esc(r.op || "")}')"><span class="chip ${r.outcome == null ? "warn" : r.outcome === "ok" ? "good" : "bad"}">${r.outcome == null ? "running" : r.outcome === "ok" ? "ok" : "failed"}</span><span>${{up: "Start box", down: "Stop box"}[r.action] || r.action}</span><span class="muted">${r.outcome && r.outcome !== "ok" ? esc(r.outcome) : ""}</span><span class="muted">${when(r.started)}</span></li>`).join("") : `<li class="muted" style="cursor:default;grid-template-columns:1fr">Not started yet.</li>`;
+  if (openRun) showRunLog(openRun, true);
+}
+function boxCard(b) {
+  const s = b.status, pct = Math.min(100, 100 * s.current.count / s.batch_size), used = 1 - s.disk.free / s.disk.total, r = 30, C = 2 * Math.PI * r;
+  return `<div class="card"><h2>The box <span class="hint">${esc(b.name)} · reported ${ago(b.status_age_s)} · up ${(s.uptime_s / 3600).toFixed(1)} h · control: ${esc(b.control?.command || "run")}</span></h2>
+    <div class="tiles">
       ${tile("Current batch", `${n(s.current.count)}<small> / ${n(s.batch_size)}</small>`, `<div class="progress"><i style="width:${pct.toFixed(1)}%"></i></div>${s.current.failed} failed decodes`)}
       ${tile("Awaiting validation", `${s.unvalidated.length}<small> / 4</small>`, s.unvalidated.length >= 4 ? `<span style="color:var(--warn)">crawling paused until one clears</span>` : `${s.sealed.length} batches sealed on the box`)}
       <div class="tile" style="display:flex;gap:14px;align-items:center"><svg class="ring" viewBox="0 0 72 72"><circle class="track" cx="36" cy="36" r="${r}"/><circle class="val" cx="36" cy="36" r="${r}" stroke-dasharray="${(C * used).toFixed(1)} ${C.toFixed(1)}" style="stroke:${used > .85 ? "var(--bad)" : used > .7 ? "var(--warn)" : "var(--accent)"}"/></svg><div><div class="k">Box disk</div><div class="v" style="font-size:18px">${gb(s.disk.free)}</div><div class="s">free of ${gb(s.disk.total)}</div></div></div>
-    </div></div>
-    <div class="grid2">
-      <div class="card"><h2>Batches on the box</h2>${s.sealed.length ? `<table>${s.sealed.slice().reverse().map(x => `<tr><td class="mono">${esc(x.name)}</td><td class="num">${n(x.count)}</td><td>${x.validated ? `<span class="chip good">✓ validated${x.cleaned ? ", cleaned" : ""}</span>` : x.bad ? `<span class="chip bad">✕ failed · retry ${x.attempts}</span>` : `<span class="chip warn">… pending</span>`}</td></tr>`).join("")}</table>` : `<div class="muted">Nothing sealed yet.</div>`}</div>
-      <div class="card"><h2>Windows <span class="hint">as the box sees them</span></h2>${win.length ? `<div style="max-height:260px;overflow:auto"><table>${win.filter(w => w.done || !w.listing_complete).slice(0, 60).map(w => `<tr><td class="mono">${esc(w.key.split("/").slice(1).join(" · "))}</td><td class="num">${n(w.done)}</td><td>${w.listing_complete ? `<span class="chip good">complete</span>` : `<span class="chip muted">open</span>`}</td></tr>`).join("")}</table></div>` : `<div class="muted">No window list in the last report.</div>`}</div>
+      ${tile("Batches on the box", s.sealed.length ? `${s.sealed.filter(x => x.validated).length}<small> / ${s.sealed.length} validated</small>` : "0", s.sealed.length ? s.sealed.slice(-3).map(x => `${esc(x.name)} ${x.validated ? "✓" : x.bad ? "✕" : "…"}`).join(" · ") : "nothing sealed yet")}
     </div>
-    <div class="card"><h2>Last crawler summary</h2><div class="mono muted" style="word-break:break-all">${esc(s.crawler || "—")}</div></div>`;
+    ${s.crawler ? `<details style="margin-top:12px"><summary>last crawler summary</summary><pre>${esc(s.crawler)}</pre></details>` : ""}</div>`;
 }
+
+// ---- new job form ----
+function toggleNew(show) { $("#newjob").hidden = !show; if (show) { if (!$("#j-first").value) { if (state) applyPreset("smoke"); else return; } $("#j-name").focus(); estimateForm(); } }
+function applyPreset(key) {
+  const pr = state?.presets?.[key]; if (!pr) return; const p = pr.params;
+  $("#j-name").value = pr.name; $("#j-playlist").value = p.playlist; $("#j-first").value = p.months.first; $("#j-last").value = p.months.last; $("#j-cap").value = p.per_window ?? ""; $("#j-batch").value = p.batch_size; $("#j-workers").value = p.workers; $("#j-type").value = p.server_type; $("#j-location").value = p.location;
+  const names = p.bands.split(",").map(b => b.split(":")[0]); document.querySelectorAll("#j-bands input").forEach(i => i.checked = names.includes(i.value)); $("#j-bands-custom").value = names.every(nm => [...document.querySelectorAll("#j-bands input")].some(i => i.value === nm)) ? "" : p.bands;
+  estimateForm();
+}
+function formParams() {
+  const custom = $("#j-bands-custom").value.trim();
+  const bands = custom || [...document.querySelectorAll("#j-bands input:checked")].map(i => i.value).join(",");
+  return {playlist: $("#j-playlist").value.trim(), bands, months: {first: $("#j-first").value.trim(), last: $("#j-last").value.trim()}, per_window: $("#j-cap").value.trim() || null, batch_size: $("#j-batch").value.trim(), workers: $("#j-workers").value.trim(), server_type: $("#j-type").value, location: $("#j-location").value};
+}
+let estTimer = null;
+function estimateForm() { clearTimeout(estTimer); estTimer = setTimeout(async () => { try { const e = await api("/api/jobs", {action: "estimate", params: formParams()}); $("#j-estimate").innerHTML = [["windows", `${e.windows}`, `${e.bands} bands × ${e.months} months`], ["replays", e.max_replays ? `up to ${n(e.max_replays)}` : "open-ended", e.max_replays ? `about ${e.decoded_gb} GB decoded` : "until each listing is exhausted"], ["time", hours(e.hours), e.hours ? "at the GC rate" : `$${e.price_per_hour.toFixed(3)} per hour`], ["server cost", e.cost_usd != null ? `about $${e.cost_usd.toFixed(2)}` : "per hour", e.cost_usd != null ? "plus a few cents of snapshot" : "stop it when you have enough"]].map(([k, v, s]) => `<div><div class="k">${k}</div><div class="v">${v}</div><div class="k">${s}</div></div>`).join(""); } catch (e) { $("#j-estimate").innerHTML = `<div style="grid-column:1/-1;color:var(--bad)">${esc(e.message)}</div>`; } }, 250); }
+document.addEventListener("input", (e) => { if (e.target.closest("#jobform")) estimateForm(); });
+async function createJob(ev, start) {
+  ev.preventDefault(); const name = $("#j-name").value.trim(); if (!name) return toast("Give the job a name", true);
+  try { const j = await api("/api/jobs", {action: "create", name, params: formParams()}); toggleNew(false); $("#jobform").reset(); $("#j-first").value = "";
+    if (start) { await api("/api/jobs", {action: "start", id: j.id}); toast(`'${j.name}' is starting`); } else toast(`'${j.name}' created`);
+    location.hash = `job/${j.id}`; refresh(); } catch (e) { toast(e.message, true); }
+}
+
+// ---- actions ----
+async function jobAct(id, action, confirmText) {
+  if (confirmText && !confirm(`This will ${confirmText}. Continue?`)) return;
+  try { const r = await api("/api/jobs", {action, id});
+    toast({start: "Starting: a box is being created for the job", pause: "Pausing after the current page", resume: "Resuming: the box picks it up within one page", stop: "Stopping: push, validate, delete", force_stop: "Force stop: deleting the box", cancel: "Job removed"}[action] || "done");
+    if (action === "cancel") location.hash = "jobs"; else if (page !== "job") location.hash = `job/${id}`;
+    refresh(); if (page === "job") loadJob(); } catch (e) { toast(e.message, true); }
+}
+async function saveConfig(ev) { ev.preventDefault(); const values = {}; for (const k of ["CRAWLER_NAME", "CRAWLER_TYPE", "CRAWLER_LOCATION"]) values[k] = $("#f-" + k).value.trim(); try { await api("/api/config", {values}); $("#cfg-status").textContent = "saved " + new Date().toLocaleTimeString(); toast("Saved to the lab env file"); refresh(); } catch (e) { toast(e.message, true); } }
+async function run(action, confirmText) { if (confirmText && !confirm(`This will ${confirmText}. Continue?`)) return; try { const op = await api("/api/run", {action}); toast("Started; the log follows below"); openOp = op.id; location.hash = "settings"; refresh(); } catch (e) { toast(e.message, true); } }
+async function showLog(id, quiet) { openOp = id; try { const r = await api(`/api/log?op=${encodeURIComponent(id)}`); const pre = $("#oplog"); pre.hidden = false; const atEnd = pre.scrollTop + pre.clientHeight >= pre.scrollHeight - 20; pre.textContent = r.log || "(no output yet)"; if (!quiet || atEnd) pre.scrollTop = pre.scrollHeight; } catch (e) { if (!quiet) toast(e.message, true); } }
+async function showRunLog(id, quiet) { if (!id) return; openRun = id; try { const r = await api(`/api/log?op=${encodeURIComponent(id)}`); const pre = $("#jb-log"); pre.hidden = false; const atEnd = pre.scrollTop + pre.clientHeight >= pre.scrollHeight - 20; pre.textContent = r.log || "(no output yet)"; if (!quiet || atEnd) pre.scrollTop = pre.scrollHeight; } catch (e) { if (!quiet) toast(e.message, true); } }
 
 // ---- charts (inline SVG, no deps) ----
 function stackedChart(windows, months, bands) {
@@ -342,23 +478,15 @@ function rateChart(history) {
   let g = ""; for (let v = 0; v <= ymax; v += step) g += `<line class="grid" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text x="${L - 6}" y="${y(v) + 3}" text-anchor="end">${v}</text>`;
   const d = pts.map((p, i) => `${i ? "L" : "M"}${x(p).toFixed(1)},${y(p.rate).toFixed(1)}`).join(" ");
   const area = d + ` L${x(pts[pts.length - 1]).toFixed(1)},${y(0)} L${x(pts[0]).toFixed(1)},${y(0)} Z`;
-  const last = pts[pts.length - 1], hours = ((t1 - t0) / 3.6e6).toFixed(1);
+  const last = pts[pts.length - 1], hrs = ((t1 - t0) / 3.6e6).toFixed(1);
   const dots = pts.filter((p, i) => i % Math.ceil(pts.length / 40) === 0 || i === pts.length - 1).map(p => `<circle cx="${x(p).toFixed(1)}" cy="${y(p.rate).toFixed(1)}" r="7" fill="transparent" data-tip="${p.t.slice(11, 16)} UTC · ${p.rate}/min · ${esc(p.phase || "")}"/>`).join("");
-  return `<svg class="chart" viewBox="0 0 ${W} ${H}">${g}<path d="${area}" fill="var(--accent)" opacity=".12"/><path d="${d}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/>${dots}<circle cx="${x(last).toFixed(1)}" cy="${y(last.rate).toFixed(1)}" r="4" fill="var(--accent)" stroke="var(--surface)" stroke-width="2"/><text x="${L}" y="${H - 8}">${pts[0].t.slice(11, 16)} UTC</text><text x="${W - R}" y="${H - 8}" text-anchor="end">${hours} h · now ${last.rate}/min</text></svg>`;
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}">${g}<path d="${area}" fill="var(--accent)" opacity=".12"/><path d="${d}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/>${dots}<circle cx="${x(last).toFixed(1)}" cy="${y(last.rate).toFixed(1)}" r="4" fill="var(--accent)" stroke="var(--surface)" stroke-width="2"/><text x="${L}" y="${H - 8}">${pts[0].t.slice(11, 16)} UTC</text><text x="${W - R}" y="${H - 8}" text-anchor="end">${hrs} h · now ${last.rate}/min</text></svg>`;
 }
 function niceStep(raw) { const p = Math.pow(10, Math.floor(Math.log10(Math.max(raw, 1)))), f = raw / p; return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * p; }
 
-// ---- actions ----
-async function control(box, command) { try { await api("/api/control", {box, command}); toast({run: "Resuming: the box picks it up within one page", pause: "Pausing after the current page", stop: "Stopping: the box seals, pushes and exits"}[command]); refresh(); } catch (e) { toast(e.message, true); } }
-async function saveConfig(ev) {
-  ev.preventDefault(); const f = ev.target; const values = {}; for (const k of ["CRAWLER_NAME", "CRAWLER_TYPE", "CRAWLER_LOCATION", "CRAWLER_PLAYLIST", "CRAWLER_BANDS", "CRAWLER_PER_WINDOW", "CRAWLER_BATCH", "CRAWLER_WORKERS"]) values[k] = $("#f-" + k).value.trim();
-  const a = $("#f-months-first").value.trim(), b = $("#f-months-last").value.trim(); if (!/^\d{4}-\d{2}$/.test(a) || !/^\d{4}-\d{2}$/.test(b) || a > b) return toast("Months must look like 2025-07 and be in order", true); values.CRAWLER_MONTHS = `${a}..${b}`;
-  try { await api("/api/config", {values}); $("#cfg-status").textContent = "saved " + new Date().toLocaleTimeString(); toast("Settings saved to the lab env file"); refresh(); } catch (e) { toast(e.message, true); }
-}
-async function run(action, confirmText) { if (confirmText && !confirm(`This will ${confirmText}. Continue?`)) return; try { const op = await api("/api/run", {action}); toast("Started; the log follows below"); openOp = op.id; location.hash = "crawler"; refresh(); } catch (e) { toast(e.message, true); } }
-async function showLog(id, quiet) { openOp = id; try { const r = await api(`/api/log?op=${encodeURIComponent(id)}`); const pre = $("#oplog"); pre.hidden = false; const atEnd = pre.scrollTop + pre.clientHeight >= pre.scrollHeight - 20; pre.textContent = r.log || "(no output yet)"; if (!quiet || atEnd) pre.scrollTop = pre.scrollHeight; } catch (e) { if (!quiet) toast(e.message, true); } }
+// ---- polling ----
 async function refresh() { try { render(await api("/api/overview")); } catch (e) { $("#side-updated").textContent = "cannot reach the lab: " + e.message; } }
-refresh(); setInterval(refresh, 10000);
+route(); refresh(); setInterval(refresh, 10000); setInterval(() => { if (page === "job") loadJob(); }, 10000);
 </script>
 </body>
 </html>

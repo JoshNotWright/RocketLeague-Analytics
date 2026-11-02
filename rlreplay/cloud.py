@@ -121,6 +121,7 @@ class Config:
     min_free_gb: float = 25.0
     status_every: float = 30.0
     retry_after: float = 600.0     # seconds before an unvalidated batch is pushed again
+    job: str | None = None         # the lab job this box runs (lab/jobs.py); reported in status and manifests
     rclone: str = "rclone"         # a command line, e.g. "rclone --config /etc/rlreplay/rclone.conf"
     ssh: str = "ssh"               # likewise, e.g. "ssh -i /etc/rlreplay/lab_key"
 
@@ -147,7 +148,7 @@ class Config:
                    tier=raw.get("tier", "gc"), max_unvalidated=int(raw.get("max_unvalidated", 4)),
                    min_free_gb=float(raw.get("min_free_gb", 25.0)), status_every=float(raw.get("status_every", 30.0)),
                    retry_after=float(raw.get("retry_after", 600.0)),
-                   rclone=raw.get("rclone", "rclone"), ssh=raw.get("ssh", "ssh"))
+                   rclone=raw.get("rclone", "rclone"), ssh=raw.get("ssh", "ssh"), job=raw.get("job"))
 
     def windows(self) -> list[Window]:
         """Months outer, bands inner, so every band advances together and an early stop is balanced."""
@@ -334,7 +335,7 @@ class BatchRunner:
                            "attempts": self.attempts.get(b, {}).get("n", 0),
                            "cleaned": man.get("cleaned")})
         elapsed = max(1.0, time.time() - self.started)
-        return {"box": self.cfg.box, "updated": _now(), "phase": self.phase, "command": self.command,
+        return {"box": self.cfg.box, "job": self.cfg.job, "updated": _now(), "phase": self.phase, "command": self.command,
                 "current": {"count": len(self.current["items"]), "failed": len(self.current["failed"])},
                 "batch_size": self.cfg.batch_size, "sealed": sealed, "unvalidated": self.unvalidated(),
                 "saved_this_run": self.saved_total, "per_minute": round(60.0 * self.saved_total / elapsed, 1),
@@ -463,7 +464,7 @@ class BatchRunner:
         name = f"{stamp}-{n:03d}"
         items = self.current["items"]
         windows = sorted({(i["playlist"], i["band"], i["month"]) for i in items})
-        manifest = {"batch": name, "box": self.cfg.box, "created": _now(), "items": items,
+        manifest = {"batch": name, "box": self.cfg.box, "job": self.cfg.job, "created": _now(), "items": items,
                     "failed": self.current["failed"], "bytes": sum(i["size"] for i in items),
                     "ledger": [{"meta": f"meta/{p}/{b}/{m}.jsonl", "state": f"meta/{p}/{b}/{m}.state.json",
                                 "playlist": p, "band": b, "month": m} for p, b, m in windows]}

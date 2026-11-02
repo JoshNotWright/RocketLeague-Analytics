@@ -2,8 +2,9 @@
 
 Implements [HANDOFF_SEEDBOX_PIPELINE.md](HANDOFF_SEEDBOX_PIPELINE.md) with one change agreed
 afterwards: the **lab is the control plane**. Every secret lives in one root-only file on the
-lab, the up/down scripts run on the lab, and the lab's web UI configures, starts, pauses and
-stops runs. The operator PC only talks to the lab.
+lab, the up/down scripts run on the lab, and the lab's web UI holds **jobs** (`lab/jobs.py`):
+a job is a saved set of crawl parameters with a lifecycle, and starting, pausing, stopping and
+continuing one is how boxes come and go. The operator PC only talks to the lab.
 
 ```
 operator PC  --tailnet-->  lab (UI, secrets, data tree, validator)  <--tailnet-->  Hetzner box (crawl + decode)
@@ -40,7 +41,8 @@ decoded/<playlist>/<band>/<yyyy-mm>/<id>.npz
 meta/<playlist>/<band>/<yyyy-mm>.jsonl          the ledger; losing it is the only way to refetch
 meta/<playlist>/<band>/<yyyy-mm>.state.json     the crawl cursor per window
 batches/<batch>.manifest.json, .ok, .bad
-boxes/<box>/status.json, control.json
+boxes/<box>/status.json, control.json, tailnet_ip, history.jsonl
+jobs/<id>.json                                  a job: name, state, params, runs
 ops/<timestamp>-<action>.log                    logs of scripts the UI launched
 ```
 
@@ -81,16 +83,28 @@ The full walk-through, from accounts to the first run, is [DEPLOYMENT.md](DEPLOY
 
 ## Lifecycle
 
+- **Jobs** (`lab/jobs.py`, `jobs/<id>.json` on the lab): draft → running → paused / stopping →
+  stopped → (continue) running … → complete. *Start* writes `run` to the control file and runs
+  `crawler_up.sh --job <id>`, which takes the crawl parameters from the job file; *pause* and
+  *resume* write the control file; *stop* runs `crawler_down.sh` (push, validate, delete) and
+  *force stop* adds `--force`; *continue* is start again on a new box, which pulls the ledger;
+  *cancel* removes the job. When the box reports "all windows complete" for the running job,
+  the lab runs the stop itself and the job becomes complete. One job may be active at a time.
+  The box's status and every manifest carry the job id, so progress, batches and rate history
+  are shown per job.
 - **Up** (`crawler_up.sh`): firewall allowing port 22 from the lab's public IP only, server from
   the snapshot, secrets over SSH stdin into `/etc/rlreplay` (mode 600), `tailscale up` with the
-  auth key read from a file that is shredded right after, the public rule removed once the box
-  answers over the tailnet, ledger pulled, service started. Re-running on an existing box only
-  restarts the service.
+  auth key read from a file that is shredded right after, the box's tailnet address recorded in
+  `boxes/<box>/tailnet_ip` (the lab talks to it by address, since a deleted ephemeral node's
+  name can linger), the public rule removed once the box answers over the tailnet, ledger
+  pulled, service started. If any step after creation fails the server is deleted again
+  (`--keep-on-failure` to inspect). With `--job` it refuses to adopt an existing box.
 - **Pause / resume / stop**: the UI (or `set_control` in `crawler_lib.sh`) writes
   `boxes/<box>/control.json`; the box honours it within a page.
 - **Down** (`crawler_down.sh`): writes `stop`, stops the service, runs the final push and waits
-  for validation, deletes the server only when every manifest has its `.ok`. Otherwise it lists
-  what is unvalidated and leaves the server running.
+  for validation, logs the box out of the tailnet, deletes the server only when every manifest
+  has its `.ok`. Otherwise it lists what is unvalidated and leaves the server running;
+  `--force` deletes it anyway.
 - **Status**: the UI, or `crawler_status.sh` (reads the status file; `--live` asks the box).
 
 ## Secrets

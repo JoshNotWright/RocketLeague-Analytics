@@ -103,7 +103,14 @@ set_control() {
         >"$LAB_ROOT/boxes/$CRAWLER_NAME/control.json"
 }
 
-# Render /etc/rlreplay/crawler.json for the box from the lab.env settings.
+# Load a job's parameters (lab/jobs.py) over the CRAWLER_* defaults: crawler_up.sh --job <id>.
+load_job() {
+    local job_id="$1" exports
+    exports="$(cd "$LAB_REPO" && python3 -m lab.jobs exports "$LAB_ROOT" "$job_id")" || die "cannot load job $job_id"
+    eval "$exports"
+}
+
+# Render /etc/rlreplay/crawler.json for the box from the lab.env settings (or the loaded job).
 # rclone flags: the lab tree may sit on an SMB mount, where a just-written file can report size
 # 0 and a just-deleted one refuses re-creation; so no post-copy size check (the lab validates
 # every decoded file by sha256), no modtime setstat, and no delete-and-retry on the same path.
@@ -116,11 +123,13 @@ render_crawler_config() {
         bands_json+="{\"name\": \"$name\", \"min\": \"$min\", \"max\": \"$max\"},"
     done
     bands_json="[${bands_json%,}]"
-    local per_window="null"
+    local per_window="null" job_json="null"
     [[ -n "$CRAWLER_PER_WINDOW" ]] && per_window="$CRAWLER_PER_WINDOW"
+    [[ -n "${CRAWLER_JOB:-}" ]] && job_json="\"$CRAWLER_JOB\""
     cat <<EOF
 {
   "box": "$CRAWLER_NAME",
+  "job": $job_json,
   "work": "/var/lib/rlreplay",
   "lab": {
     "remote": "lab:$LAB_ROOT",

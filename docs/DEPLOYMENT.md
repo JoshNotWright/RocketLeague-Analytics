@@ -203,16 +203,17 @@ Cost: a snapshot is billed by size, about EUR 0.01 per GB per month, so well und
 
 ## 3. Smoke test (about 20 minutes)
 
-Do this once before the real run. On the Settings page set:
+Everything you run is a **job**: a saved set of crawl parameters (playlist, rank bands, months,
+cap per window, batch size, server) with a lifecycle. Start a job and a box is created for it;
+stop it and the box pushes what it holds, the lab validates it, and the server is deleted.
+Pause leaves the box running but idle. A stopped job is continued on a new box, which pulls
+the ledger and carries on; cancel removes the job (the archive keeps what it collected). One
+job runs at a time, because there is one box and one ballchasing key.
 
-| field | value |
-| --- | --- |
-| months | `2025-07` to `2025-07` |
-| cap per window | `300` |
-| batch size | `500` |
-
-Save, then on the Crawler page press **Create and start** (or `sudo scripts/crawler_up.sh`).
-Watch the log:
+Do this once before the real run. On the **Jobs** page press **New job**, pick the
+**Smoke test** preset (one month, 300 replays per window, batches of 500, three bands, nine
+hundred replays in all) and press **Create and start**. The job page opens; its Runs card
+shows the script log:
 1. firewall allows port 22 from the lab's public IP only, server created from the snapshot
 2. secrets written over SSH into `/etc/rlreplay` on the box (mode 600)
 3. box joins the tailnet as `rl-crawler`, the public rule is removed
@@ -227,40 +228,49 @@ ls /media/rocketleague/rl/decoded/ranked-doubles/diamond/2025-07 | head
 wc -l /media/rocketleague/rl/meta/ranked-doubles/*/2025-07.jsonl
 cat /media/rocketleague/rl/batches/*.ok
 ```
-Then **Stop and delete**. It stops the service (the box seals and pushes the rest), waits for
-validation, deletes the server. Confirm with `hcloud server list` (empty) and in the Tailscale
-admin console (the ephemeral node is gone). Finally press **Create and start** again: the box
-must come up, pull the ledger, report "all windows complete" without fetching anything, and
-you delete it again.
+Because the job has a cap, it finishes on its own: when the box reports every window complete
+the lab runs the stop for you, the last batch is pushed and validated, the server is deleted,
+and the job shows **Complete**. Confirm with `hcloud server list` (empty) and in the Tailscale
+admin console (the ephemeral node is gone). To check resumption, press **Continue** on the
+completed job: a box comes up, pulls the ledger, reports every window complete without
+fetching anything, and is deleted again.
 
-If any step fails, the op log on the Crawler page has the script output; the box's own log is
-`journalctl -u rlreplay-crawler` over `ssh root@rl-crawler`.
+If any step fails the job shows **Failed** with the reason, and the run's log is one click
+away under Runs. **Stop box** retries a clean stop; **Force stop** deletes the box even when
+its last push failed (whatever it still held is fetched again next time). The box's own log is
+`journalctl -u rlreplay-crawler` over `ssh root@<its tailnet address>`; the address is in
+`boxes/rl-crawler/tailnet_ip` on the lab.
 
 ---
 
 ## 4. The real run
 
-Settings: months `2025-07` to the current month, no cap, batch 20,000, workers 4, cpx32.
-**Create and start**. At the GC rate the box does about 170,000 replays a day; the three
-bands of ranked doubles over sixteen months are a few days. Cost is about EUR 1.40 a day for
-the server plus nothing for traffic (20 TB included).
+**New job** → the **Full crawl** preset: every month from July 2025 to the current one, no
+cap, batches of 20,000, cpx32. Press **Create and start**. At the GC rate the box does about
+170,000 replays a day; the three bands of ranked doubles over sixteen months are a few days.
+Cost is about EUR 1.40 a day for the server plus nothing for traffic (20 TB included). The
+job page's estimate says "open-ended" because without a cap the size depends on what
+ballchasing has listed.
 
 Day to day:
-- **Overview** is the only page you need. The rate chart flattens to zero when ballchasing
-  throttles or the box waits for validation; "suggested next steps" appears when something
-  needs you.
-- **Pause** holds fetching without losing the page cursor; **Resume** continues. Use it if you
-  want the bandwidth for something else.
-- **Stop** (on the box card) ends the service but keeps the server; **Stop and delete** on the
-  operations card is the normal way to finish.
+- **Overview** is the only page you need. Its headline is the running job and what the box
+  is doing; the rate chart flattens to zero when ballchasing throttles or the box waits for
+  validation; "suggested next steps" appears when something needs you.
+- **Pause** holds fetching without losing the page cursor and keeps the box; **Resume**
+  continues. Use it if you want the bandwidth for something else.
+- **Stop** is the normal way to finish early: push, validate, delete. The job can be
+  **Continued** later on a fresh box from exactly where the ledger stands, which is also the
+  answer to anything going wrong on the box: stop, fix, continue.
 - A batch marked **✕ failed** retries on its own every ten minutes. If it keeps failing, the
   reason is in the Transfers row; a sha mismatch usually means the lab disk, not the box.
 - The box pauses itself when four batches await validation or free disk drops under 25 GB.
   Both clear on their own once the lab validates.
+- If the box's decoder fails on everything (a bad image), the box parks itself and the job
+  page says so; nothing is written off. Stop, **Rebuild image** on Settings, Continue.
 
-When the run ends ("Every window is complete"), **Stop and delete**. The archive stays on the
-lab; the next run (more months, another playlist) starts from the ledger and fetches only what
-is new.
+An uncapped job completes when every window's listing is exhausted; the lab then stops the
+box for you. The archive stays on the lab; a later job (more months, another playlist)
+starts from the ledger and fetches only what is new.
 
 ---
 

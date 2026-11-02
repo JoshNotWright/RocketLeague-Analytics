@@ -46,8 +46,11 @@ from .header import header_summary, parse
 from .stream import iter_snapshots
 
 _ROOT = Path(__file__).resolve().parent.parent
-RLDECODE_EXE = _ROOT / "tools" / "rldecode.exe"
-# Module-level switch for the Rust decoder (rust/rldecode, built to tools/rldecode.exe). It
+# rust/rldecode builds to tools/rldecode.exe on Windows and tools/rldecode elsewhere (the crawler
+# image puts it there); take whichever exists.
+RLDECODE_EXE = next((c for c in (_ROOT / "tools" / "rldecode.exe", _ROOT / "tools" / "rldecode") if c.exists()),
+                    _ROOT / "tools" / ("rldecode.exe" if os.name == "nt" else "rldecode"))
+# Module-level switch for the Rust decoder (rust/rldecode, built to tools/rldecode[.exe]). It
 # writes the same .npz as `save` about 10x faster; `RLREPLAY_NO_RUST=1` forces the Python path.
 USE_RUST = True
 

@@ -206,6 +206,22 @@ class CloudLoopTests(unittest.TestCase):
         self.assertIn("diamond-2025-07-3", lab_validate.ledger_ids(ledger))
         self.assertFalse((self.cfg.work / "crawl/ranked-doubles/diamond/2025-07/diamond-2025-07-3.replay").exists())
 
+    def test_broken_decoder_parks_the_box_and_keeps_raws(self):
+        """Every replay of a chunk failing is the decoder's fault: no ledger burn, no deleted raws."""
+        runner, _ = self.runner(decoder=lambda paths, out: [(Path(p).stem, "failed", "no decoder") for p in paths])
+        runner.pull_ledger()
+        with patch.object(cloud, "DECODER_BROKEN_MIN", 3):
+            self.assertTrue(runner.cycle())
+            self.assertTrue(runner.phase.startswith("decoder failing"))
+            self.assertEqual(runner.current["failed"], [])
+            self.assertEqual(runner.current["items"], [])
+            raws = len(list(self.cfg.work.glob("crawl/ranked-doubles/diamond/2025-07/*.replay")))
+            self.assertGreaterEqual(raws, 3)
+            self.assertTrue(runner.cycle())  # stays parked, fetches nothing more
+            self.assertEqual(len(list(self.cfg.work.glob("crawl/**/*.replay"))), raws)
+        runner.finish()
+        self.assertEqual(list(self.lab.glob("batches/*.manifest.json")), [])
+
     def test_disk_guard_pauses_crawling(self):
         runner, _ = self.runner()
         runner.pull_ledger()

@@ -232,6 +232,9 @@ class Transport:
 
 # ---- the loop --------------------------------------------------------------------------------
 
+DECODER_BROKEN_MIN = 10   # a chunk this large failing entirely means the decoder is broken
+
+
 class BatchRunner:
     def __init__(self, cfg: Config, *, transport: Transport | None = None, crawler_factory=None,
                  decoder=None, sleep=time.sleep, log=_log):
@@ -244,6 +247,7 @@ class BatchRunner:
         self.batches = self.work / "batches"
         self.batches.mkdir(parents=True, exist_ok=True)
         self.stop_requested = False
+        self.decoder_broken: str | None = None
         self.command = "run"
         self.phase = "starting"
         self.known: set[str] = set()
@@ -427,7 +431,15 @@ class BatchRunner:
         if not pending:
             return 0
         added = 0
-        for replay_id, status, error in self.decoder([str(p) for p in pending], dec):
+        results = list(self.decoder([str(p) for p in pending], dec))
+        failures = [(rid, err) for rid, status, err in results if status not in ("ok", "cached")]
+        if len(results) >= DECODER_BROKEN_MIN and len(failures) == len(results):
+            # Every replay in the chunk failed: that is the decoder, not the replays. Keep the raws,
+            # record nothing, and let cycle() park the box where the operator can see it.
+            self.decoder_broken = failures[0][1] or "unknown error"
+            self.log(f"decoder failed for all {len(results)} replays of {w.key}: {self.decoder_broken}")
+            return 0
+        for replay_id, status, error in results:
             raw = d / f"{replay_id}.replay"
             if status in ("ok", "cached"):
                 npz = dec / f"{replay_id}.npz"
@@ -556,6 +568,11 @@ class BatchRunner:
             self.push_status()
             self.sleep(30)
             return True
+        if self.decoder_broken:
+            self.phase = f"decoder failing: {self.decoder_broken[:120]}"
+            self.push_status()
+            self.sleep(60)
+            return True
         if len(self.unvalidated()) >= self.cfg.max_unvalidated or not self.disk_ok():
             self.phase = "waiting for validation" if self.disk_ok() else "waiting for disk"
             self.push_status()
@@ -570,6 +587,10 @@ class BatchRunner:
         self.crawl_chunk(w)
         self.phase = f"decoding {w.key}"
         self.decode_window(w)
+        if self.decoder_broken:
+            self.phase = f"decoder failing: {self.decoder_broken[:120]}"
+            self.push_status(force=True)
+            return True
         if len(self.current["items"]) >= self.cfg.batch_size:
             name = self.seal()
             if name:

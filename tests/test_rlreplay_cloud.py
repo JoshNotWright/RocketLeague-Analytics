@@ -3,6 +3,8 @@ import importlib.util
 import json
 import tempfile
 import unittest
+from types import SimpleNamespace
+from unittest.mock import patch
 from pathlib import Path
 
 from rlreplay import cloud
@@ -253,6 +255,23 @@ class ConfigTests(unittest.TestCase):
         self.assertEqual(w.key, "ranked-doubles/d/2025-07")
         self.assertEqual(w.filters()["replay-date-before"], "2025-08-01T00:00:00Z")
         self.assertEqual(cfg.lab_meta(w), "meta/ranked-doubles/d/2025-07.jsonl")
+
+    def test_transport_splits_command_strings(self):
+        """The config carries rclone/ssh as command lines with flags; argv must be split, not one element."""
+        cfg = cloud.Config(box="b", work=Path("w"), lab_remote="lab:/x", lab_ssh="u@lab", lab_validate="v",
+                           lab_root="/x", rclone="rclone --config /etc/rlreplay/rclone.conf",
+                           ssh="ssh -i /etc/rlreplay/lab_key -o StrictHostKeyChecking=accept-new")
+        calls = []
+        fake = SimpleNamespace(returncode=1, stdout="", stderr="")
+        with patch.object(cloud.subprocess, "run", side_effect=lambda argv, **kw: calls.append(argv) or fake):
+            t = cloud.Transport(cfg)
+            t.copy_from("meta/a.jsonl", Path(tempfile.mkdtemp()) / "a.jsonl")
+            t.listdir("batches")
+            t.validate("b1")
+        self.assertEqual(calls[0][:3], ["rclone", "--config", "/etc/rlreplay/rclone.conf"])
+        self.assertEqual(calls[1][:3], ["rclone", "--config", "/etc/rlreplay/rclone.conf"])
+        self.assertEqual(calls[2][:3], ["ssh", "-i", "/etc/rlreplay/lab_key"])
+        self.assertIn("u@lab", calls[2])
 
 
 if __name__ == "__main__":

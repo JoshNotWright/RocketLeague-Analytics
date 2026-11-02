@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 # Create the crawler box from the snapshot, hand it its secrets over SSH, join it to the tailnet,
 # close its public port, and start the service. Idempotent: on an existing server it only makes
-# sure the service is running. Runs on the lab. Usage: scripts/crawler_up.sh [--type cpx32] [--name rl-crawler]
+# sure the service is running. If any step after the server is created fails, the server and its
+# boot firewall are deleted again (nothing of value is on a box that never started crawling);
+# --keep-on-failure leaves it for inspection. Runs on the lab.
+# Usage: scripts/crawler_up.sh [--type cpx32] [--name rl-crawler] [--keep-on-failure]
 # shellcheck source=crawler_lib.sh
 . "$(dirname "$0")/crawler_lib.sh"
 need_cmd hcloud ssh curl
@@ -11,6 +14,7 @@ while [[ $# -gt 0 ]]; do
     case "$1" in
         --type) CRAWLER_TYPE="$2"; shift 2 ;;
         --name) CRAWLER_NAME="$2"; shift 2 ;;
+        --keep-on-failure) KEEP_ON_FAILURE=1; shift ;;
         *) die "unknown argument $1" ;;
     esac
 done
@@ -34,6 +38,21 @@ if ! hcloud firewall describe "$FW" >/dev/null 2>&1; then
 fi
 log "allowing ssh from $MYIP only, for bootstrap"
 hcloud firewall add-rule "$FW" --direction in --protocol tcp --port 22 --source-ips "${MYIP}/32" >/dev/null
+
+STARTED=0
+cleanup_on_failure() {
+    local rc=$?
+    [[ $rc -ne 0 && $STARTED -eq 0 ]] || return 0
+    if [[ "${KEEP_ON_FAILURE:-0}" == 1 ]]; then
+        log "bring-up failed (exit $rc); $CRAWLER_NAME kept for inspection (public port may still be open from $MYIP)"
+        return 0
+    fi
+    log "bring-up failed (exit $rc); deleting $CRAWLER_NAME and its boot firewall"
+    hcloud server delete "$CRAWLER_NAME" >/dev/null 2>&1 || true
+    hcloud firewall delete "$FW" >/dev/null 2>&1 || true
+    set_control stop 2>/dev/null || true
+}
+trap cleanup_on_failure EXIT
 
 log "creating $CRAWLER_NAME ($CRAWLER_TYPE, $CRAWLER_LOCATION) from image $IMAGE"
 hcloud server create --name "$CRAWLER_NAME" --type "$CRAWLER_TYPE" --image "$IMAGE" --location "$CRAWLER_LOCATION" \
@@ -71,4 +90,5 @@ hcloud firewall delete-rule "$FW" --direction in --protocol tcp --port 22 --sour
 log "pulling the ledger and starting the service"
 box_ssh "$BOX_BATCH pull-ledger"
 box_ssh 'systemctl enable --now rlreplay-crawler && systemctl is-active rlreplay-crawler'
+STARTED=1
 log "$CRAWLER_NAME is crawling; status: scripts/crawler_status.sh"

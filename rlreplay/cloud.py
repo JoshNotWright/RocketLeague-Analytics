@@ -33,6 +33,7 @@ import json
 import os
 import shutil
 import signal
+import shlex
 import socket
 import subprocess
 import sys
@@ -120,8 +121,14 @@ class Config:
     min_free_gb: float = 25.0
     status_every: float = 30.0
     retry_after: float = 600.0     # seconds before an unvalidated batch is pushed again
-    rclone: str = "rclone"
-    ssh: str = "ssh"
+    rclone: str = "rclone"         # a command line, e.g. "rclone --config /etc/rlreplay/rclone.conf"
+    ssh: str = "ssh"               # likewise, e.g. "ssh -i /etc/rlreplay/lab_key"
+
+    def rclone_cmd(self) -> list:
+        return shlex.split(self.rclone)
+
+    def ssh_cmd(self) -> list:
+        return shlex.split(self.ssh)
 
     @classmethod
     def load(cls, path) -> "Config":
@@ -183,23 +190,23 @@ class Transport:
         listing = src_dir / ".push_list"
         listing.write_text("".join(n + "\n" for n in names), encoding="utf-8")
         try:
-            self._run([self.cfg.rclone, "copy", "--files-from", str(listing), str(src_dir),
+            self._run([*self.cfg.rclone_cmd(), "copy", "--files-from", str(listing), str(src_dir),
                        f"{self.cfg.lab_remote}/{dest_subdir}", "--transfers", "8", "--checkers", "8"])
         finally:
             listing.unlink(missing_ok=True)
 
     def copy_to(self, src: Path, dest_path: str) -> None:
-        self._run([self.cfg.rclone, "copyto", str(src), f"{self.cfg.lab_remote}/{dest_path}"])
+        self._run([*self.cfg.rclone_cmd(), "copyto", str(src), f"{self.cfg.lab_remote}/{dest_path}"])
 
     def copy_from(self, remote_path: str, dest: Path) -> bool:
         """False when the remote file does not exist."""
         dest.parent.mkdir(parents=True, exist_ok=True)
-        completed = subprocess.run([self.cfg.rclone, "copyto", f"{self.cfg.lab_remote}/{remote_path}", str(dest)],
+        completed = subprocess.run([*self.cfg.rclone_cmd(), "copyto", f"{self.cfg.lab_remote}/{remote_path}", str(dest)],
                                    capture_output=True, text=True, timeout=600)
         return completed.returncode == 0 and dest.exists()
 
     def listdir(self, remote_dir: str) -> list:
-        completed = subprocess.run([self.cfg.rclone, "lsf", f"{self.cfg.lab_remote}/{remote_dir}"],
+        completed = subprocess.run([*self.cfg.rclone_cmd(), "lsf", f"{self.cfg.lab_remote}/{remote_dir}"],
                                    capture_output=True, text=True, timeout=600)
         if completed.returncode != 0:
             return []
@@ -209,7 +216,7 @@ class Transport:
         """Run the lab-side validator for one batch; True if it wrote the .ok."""
         if not self.cfg.lab_ssh:
             return False
-        completed = subprocess.run([self.cfg.ssh, "-o", "BatchMode=yes", self.cfg.lab_ssh,
+        completed = subprocess.run([*self.cfg.ssh_cmd(), "-o", "BatchMode=yes", self.cfg.lab_ssh,
                                     f"{self.cfg.lab_validate} {self.cfg.lab_root} {batch}"],
                                    capture_output=True, text=True, timeout=7200)
         return completed.returncode == 0
@@ -468,9 +475,9 @@ class BatchRunner:
         self.validating[name] = thread
         thread.start()
 
-    def mirror_marks(self) -> None:
-        """Copy <batch>.ok / <batch>.bad from the lab for every unvalidated batch."""
-        for name in self.unvalidated():
+    def mirror_marks(self, names: list | None = None) -> None:
+        """Copy <batch>.ok / <batch>.bad from the lab for every unvalidated batch (or the given ones)."""
+        for name in (self.unvalidated() if names is None else names):
             for ext in ("ok", "bad"):
                 self.transport.copy_from(f"batches/{name}.{ext}", self.batches / f"{name}.{ext}")
 
@@ -502,6 +509,12 @@ class BatchRunner:
             thread = self.validating.get(name)
             if thread is not None and thread.is_alive():
                 continue
+            if thread is not None:
+                # It finished after this cycle's mirror_marks; look once more before pushing it again.
+                self.validating.pop(name, None)
+                self.mirror_marks([name])
+                if (self.batches / f"{name}.ok").exists():
+                    continue
             rec = self.attempts.get(name, {"n": 0, "last": 0.0})
             if rec["n"] == 0 or now - rec["last"] >= self.cfg.retry_after:
                 (self.batches / f"{name}.bad").unlink(missing_ok=True)

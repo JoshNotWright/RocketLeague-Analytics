@@ -111,6 +111,12 @@ else
 fi
 git config --system --add safe.directory "$DEST"
 printf '   at %s\n' "$(git -C "$DEST" log -1 --format='%h %s')"
+# The copy fetched from raw.githubusercontent.com can be minutes stale (CDN cache). Now that the
+# checkout is current, hand over to its copy of this script for the rest of the run.
+if [[ -z "${RL_BOOTSTRAP_REEXEC:-}" ]]; then
+    export RL_BOOTSTRAP_REEXEC=1 RL_ROOT="$ROOT" RL_USER="$USER_NAME" RL_DEST="$DEST" RL_BRANCH="$BRANCH" RL_REPO_URL="$REPO_URL"
+    exec bash "$DEST/scripts/lab_bootstrap.sh"
+fi
 
 # ---------------------------------------------------------------- lab_setup.sh
 say "lab setup (user $USER_NAME, tree $ROOT)"

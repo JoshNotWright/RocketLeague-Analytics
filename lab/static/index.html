@@ -367,6 +367,7 @@ function jobButtons(j, compact) {
   const id = esc(j.id), b = [];
   if (j.state === "draft") b.push(`<button class="primary" onclick="jobAct('${id}','start')">Start</button>`);
   if (j.state === "stopped" || j.state === "failed") b.push(`<button class="primary" onclick="jobAct('${id}','start')">Continue</button>`);
+  if (j.state === "complete") b.push(`<button onclick="jobAct('${id}','start')" data-tip="start a box for this job again; with every window done it only confirms the ledger and is deleted, unless the cap was raised">Continue</button>`);
   if (j.state === "running") b.push(`<button onclick="jobAct('${id}','pause')">Pause</button>`);
   if (j.state === "paused") b.push(`<button class="primary" onclick="jobAct('${id}','resume')">Resume</button>`);
   if (["running", "paused"].includes(j.state)) b.push(`<button class="danger" onclick="jobAct('${id}','stop','stop the job: the box pushes and validates what it holds, then the server is deleted')">Stop</button>`);

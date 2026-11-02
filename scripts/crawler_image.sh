@@ -44,7 +44,7 @@ chmod 700 /etc/rlreplay
 REMOTE
 
 log "copying the repository"
-rsync -az --delete -e "ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new" \
+rsync -az --delete -e "ssh -o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR" \
     --exclude '.git' --exclude 'data' --exclude '.venv' --exclude 'reports' --exclude 'tools' \
     --exclude 'rust/rldecode/target' --exclude '__pycache__' --exclude '*.egg-info' --exclude 'build' \
     --exclude 'demo-output' --exclude '.env*' \

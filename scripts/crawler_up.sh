@@ -33,9 +33,12 @@ IMAGE="$(latest_image_id)"
 [[ -n "$IMAGE" ]] || die "no snapshot with label $IMAGE_LABEL; run scripts/crawler_image.sh first"
 FW="${CRAWLER_NAME}-boot"
 MYIP="$(my_public_ip)"
-if ! hcloud firewall describe "$FW" >/dev/null 2>&1; then
-    hcloud firewall create --name "$FW" >/dev/null
+# The boot firewall is throwaway: a previous run may have left it behind with a rule from an
+# older public IP, so start from a clean one (deleting fails only if a server still uses it).
+if hcloud firewall describe "$FW" >/dev/null 2>&1; then
+    hcloud firewall delete "$FW" >/dev/null 2>&1         || die "firewall $FW is still attached to a server; run scripts/crawler_down.sh --force first"
 fi
+hcloud firewall create --name "$FW" >/dev/null
 log "allowing ssh from $MYIP only, for bootstrap"
 hcloud firewall add-rule "$FW" --direction in --protocol tcp --port 22 --source-ips "${MYIP}/32" >/dev/null
 

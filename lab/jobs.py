@@ -24,6 +24,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import secrets
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -53,7 +54,7 @@ PRESETS = {
     "full": {"name": "Full crawl", "params": dict(DEFAULT_PARAMS)},
 }
 _MONTH = re.compile(r"^\d{4}-(0[1-9]|1[0-2])$")
-_SLUG = re.compile(r"[^a-z0-9]+")
+_ID_ALPHABET = "abcdefghjkmnpqrstuvwxyz23456789"   # no 0/o/1/l/i: ids are read aloud and typed
 
 
 def _now() -> str:
@@ -164,8 +165,9 @@ def estimate(params: dict) -> dict:
             "price_per_hour": price, "decoded_gb": round(replays * 0.0008, 1) if replays else None}
 
 
-def slugify(name: str) -> str:
-    return _SLUG.sub("-", name.lower()).strip("-")[:40] or "job"
+def new_id() -> str:
+    """Six characters, opaque: the id is for URLs and files, the name is for people."""
+    return "".join(secrets.choice(_ID_ALPHABET) for _ in range(6))
 
 
 class JobStore:
@@ -221,12 +223,9 @@ class JobStore:
         if not 1 <= len(name) <= 60:
             raise ValueError("a job needs a name of up to 60 characters")
         params = clean_params(params)
-        base = slugify(name)
-        job_id = base
-        i = 2
+        job_id = new_id()
         while self._path(job_id).exists():
-            job_id = f"{base}-{i}"
-            i += 1
+            job_id = new_id()
         job = {"id": job_id, "name": name, "state": "draft", "params": params, "runs": [],
                "created": _now(), "updated": None, "note": str(note or "")[:500]}
         return self._write(job)

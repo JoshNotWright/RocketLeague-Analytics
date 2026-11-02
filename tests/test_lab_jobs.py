@@ -41,12 +41,13 @@ class JobParamTests(unittest.TestCase):
         store = jobs.JobStore(Path(tempfile.mkdtemp()))
         job = store.create("Smoke test", jobs.PRESETS["smoke"]["params"])
         text = jobs.shell_exports(job)
-        self.assertIn("export CRAWLER_JOB='smoke-test'", text)
+        self.assertRegex(job["id"], r"^[a-z0-9]{6}$")
+        self.assertIn(f"export CRAWLER_JOB='{job['id']}'", text)
         self.assertIn("export CRAWLER_MONTHS='2025-07..2025-07'", text)
         self.assertIn("export CRAWLER_PER_WINDOW='300'", text)
         self.assertIn("export CRAWLER_TYPE='cpx32'", text)
         second = store.create("Smoke test", {})
-        self.assertEqual(second["id"], "smoke-test-2")
+        self.assertNotEqual(second["id"], job["id"])   # same name, different job
 
 
 class JobLifecycleTests(unittest.TestCase):

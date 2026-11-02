@@ -45,9 +45,12 @@ esac
 export DEBIAN_FRONTEND=noninteractive
 
 # ---------------------------------------------------------------- packages
+if [[ -z "${RL_BOOTSTRAP_REEXEC:-}" ]]; then
 say "packages"
 apt-get update -qq
-apt-get install -y -qq git python3 python3-venv rclone curl ca-certificates openssh-server >/dev/null
+# libgomp1: the OpenMP runtime lightgbm links against (fits on the lab)
+apt-get install -y -qq git python3 python3-venv rclone curl ca-certificates openssh-server libgomp1 >/dev/null
+fi
 
 if ! command -v tailscale >/dev/null; then
     say "tailscale (not installed yet)"
@@ -67,7 +70,7 @@ if ! command -v hcloud >/dev/null; then
 fi
 
 # ---------------------------------------------------------------- secrets file (early: git needs it)
-say "secrets file"
+[[ -n "${RL_BOOTSTRAP_REEXEC:-}" ]] || say "secrets file"
 install -d -m 750 /etc/rlreplay
 if [[ ! -f "$ENV_FILE" ]]; then
     # lab_setup.sh copies the full template later; until then a stub holds what git needs.
@@ -96,6 +99,7 @@ if [[ "$REPO_URL" == https://github.com/* ]]; then
 fi
 
 # ---------------------------------------------------------------- repository
+if [[ -z "${RL_BOOTSTRAP_REEXEC:-}" ]]; then
 say "repository -> $DEST ($BRANCH)"
 if [[ -d "$DEST/.git" ]]; then
     git -C "$DEST" remote set-url origin "$REPO_URL"
@@ -112,10 +116,10 @@ fi
 git config --system --add safe.directory "$DEST"
 printf '   at %s\n' "$(git -C "$DEST" log -1 --format='%h %s')"
 # The copy fetched from raw.githubusercontent.com can be minutes stale (CDN cache). Now that the
-# checkout is current, hand over to its copy of this script for the rest of the run.
-if [[ -z "${RL_BOOTSTRAP_REEXEC:-}" ]]; then
-    export RL_BOOTSTRAP_REEXEC=1 RL_ROOT="$ROOT" RL_USER="$USER_NAME" RL_DEST="$DEST" RL_BRANCH="$BRANCH" RL_REPO_URL="$REPO_URL"
-    exec bash "$DEST/scripts/lab_bootstrap.sh"
+# checkout is current, hand over to its copy of this script for the rest of the run; it skips
+# the package and repository steps that were just done.
+export RL_BOOTSTRAP_REEXEC=1 RL_ROOT="$ROOT" RL_USER="$USER_NAME" RL_DEST="$DEST" RL_BRANCH="$BRANCH" RL_REPO_URL="$REPO_URL"
+exec bash "$DEST/scripts/lab_bootstrap.sh"
 fi
 
 # ---------------------------------------------------------------- venv for table building

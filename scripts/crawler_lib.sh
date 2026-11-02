@@ -56,11 +56,13 @@ box_host() {
     if [[ -s "$f" ]]; then tr -d '[:space:]' <"$f"; else echo "$CRAWLER_NAME"; fi
 }
 box_ssh() {
-    ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR         -o ConnectTimeout=15 "root@$(box_host)" "$@"
+    ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR         -o ConnectTimeout=15 -o ServerAliveInterval=5 -o ServerAliveCountMax=3 "root@$(box_host)" "$@"
 }
-# Leave the tailnet properly so the ephemeral node disappears at once; best effort.
+# Leave the tailnet properly so the ephemeral node disappears at once; best effort. The logout
+# tears down the tailnet session this very ssh runs over, so it is detached on the box and the
+# ssh is given a hard timeout.
 box_tailscale_logout() {
-    box_ssh 'tailscale logout' >/dev/null 2>&1 || true
+    timeout 20 ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=/dev/null         -o LogLevel=ERROR -o ConnectTimeout=10 "root@$(box_host)"         'nohup sh -c "sleep 1; tailscale logout" >/dev/null 2>&1 </dev/null &' >/dev/null 2>&1 || true
     rm -f "$(box_ip_file)"
 }
 

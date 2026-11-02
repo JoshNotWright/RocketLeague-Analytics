@@ -205,6 +205,14 @@ class Transport:
                                    capture_output=True, text=True, timeout=600)
         return completed.returncode == 0 and dest.exists()
 
+    def copy_tree(self, remote_dir: str, dest_dir: Path) -> bool:
+        """Mirror a lab directory into dest_dir in one rclone call (one SSH connection). False on error."""
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        completed = subprocess.run([*self.cfg.rclone_cmd(), "copy", f"{self.cfg.lab_remote}/{remote_dir}", str(dest_dir),
+                                    "--transfers", "8", "--checkers", "8"],
+                                   capture_output=True, text=True, timeout=3600)
+        return completed.returncode == 0
+
     def listdir(self, remote_dir: str) -> list:
         completed = subprocess.run([*self.cfg.rclone_cmd(), "lsf", f"{self.cfg.lab_remote}/{remote_dir}"],
                                    capture_output=True, text=True, timeout=600)
@@ -343,14 +351,23 @@ class BatchRunner:
     # -- ledger --
 
     def pull_ledger(self) -> int:
-        """Fetch every window's metadata and state from the lab (the master copy). Returns files pulled."""
+        """Fetch every window's metadata and state from the lab (the master copy). Returns files pulled.
+
+        One rclone copy of the lab's meta/ tree, then the files are placed per window: a copy per
+        file would open one SSH connection each, minutes of nothing on a fresh lab.
+        """
+        mirror = self.work / "ledger_mirror"
+        if not self.transport.copy_tree("meta", mirror):
+            self.log("could not mirror the ledger from the lab")
         n = 0
         for w in self.cfg.windows():
             d = self.cfg.window_dir(w)
-            if self.transport.copy_from(self.cfg.lab_meta(w), d / METADATA_FILE):
-                n += 1
-            if self.transport.copy_from(self.cfg.lab_state(w), d / STATE_FILE):
-                n += 1
+            for remote, local in ((self.cfg.lab_meta(w), METADATA_FILE), (self.cfg.lab_state(w), STATE_FILE)):
+                src = mirror / Path(remote).relative_to("meta")
+                if src.exists():
+                    d.mkdir(parents=True, exist_ok=True)
+                    shutil.copyfile(src, d / local)
+                    n += 1
         self.known = self.known_ids()
         return n
 

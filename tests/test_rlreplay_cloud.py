@@ -1,6 +1,7 @@
 """The cloud batch loop end to end against a fake ballchasing, a fake decoder and a local 'lab'."""
 import importlib.util
 import json
+import shutil
 import tempfile
 import unittest
 from types import SimpleNamespace
@@ -43,6 +44,12 @@ class LocalTransport(cloud.Transport):
             return False
         Path(dest).parent.mkdir(parents=True, exist_ok=True)
         Path(dest).write_bytes(src.read_bytes())
+        return True
+
+    def copy_tree(self, remote_dir, dest_dir):
+        src = self.root / remote_dir
+        if src.exists():
+            shutil.copytree(src, dest_dir, dirs_exist_ok=True)
         return True
 
     def listdir(self, remote_dir):
@@ -138,7 +145,6 @@ class CloudLoopTests(unittest.TestCase):
         runner, _ = self.runner()
         runner.run()
         # a fresh box: wipe the work dir, keep the lab
-        import shutil
         shutil.rmtree(self.cfg.work)
         runner2, _ = self.runner()
         self.assertEqual(runner2.run(), 0)

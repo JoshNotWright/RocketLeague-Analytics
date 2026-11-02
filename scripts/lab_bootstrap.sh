@@ -5,14 +5,12 @@
 # registers the lab's SSH key with Hetzner when it can, and starts the UI. Safe to re-run:
 # a second run updates the checkout and restarts the UI.
 #
-#   read -rsp 'GitHub token: ' GH_TOKEN && echo && curl -fsSL -H "Authorization: Bearer $GH_TOKEN" \
-#     https://raw.githubusercontent.com/JoshNotWright/RocketLeague-Analytics/v2-replay-features/scripts/lab_bootstrap.sh \
-#     | sudo GH_TOKEN="$GH_TOKEN" bash
+#   curl -fsSL https://raw.githubusercontent.com/JoshNotWright/RocketLeague-Analytics/v2-replay-features/scripts/lab_bootstrap.sh | sudo bash
 #
 # Environment (all optional):
-#   GH_TOKEN             fine-grained GitHub token, Contents: read-only, for this repository.
-#                        Needed while the repository is private. Stored only in lab.env as
-#                        GITHUB_TOKEN; git reads it from there through a credential helper.
+#   GH_TOKEN             only if the repository is ever made private again: a fine-grained
+#                        token, Contents read-only. Stored only in lab.env as GITHUB_TOKEN;
+#                        git reads it from there through a credential helper.
 #   HCLOUD_TOKEN, BALLCHASING_API_KEY, TS_AUTHKEY
 #                        written into lab.env if given; otherwise fill the file afterwards.
 #   RL_REPO_URL          default https://github.com/JoshNotWright/RocketLeague-Analytics.git

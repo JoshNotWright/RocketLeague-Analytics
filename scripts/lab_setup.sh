@@ -19,8 +19,26 @@ done
 
 id -u "$USER_NAME" >/dev/null 2>&1 || useradd --system --create-home --shell /bin/bash "$USER_NAME"
 mkdir -p "$ROOT"/{decoded,meta,batches,boxes,features}
-chown -R "$USER_NAME:$USER_NAME" "$ROOT"
-chmod 750 "$ROOT"
+# On a NAS mount (NFS/SMB) ownership and modes are set by the mount options, not by us; a
+# refused chown is fine as long as the push user can write. That is what is tested below.
+FSTYPE="$(stat -f -c %T "$ROOT" 2>/dev/null || echo unknown)"
+if ! chown -R "$USER_NAME:$USER_NAME" "$ROOT" 2>/dev/null || ! chmod 750 "$ROOT" 2>/dev/null; then
+    echo "note: could not chown/chmod $ROOT ($FSTYPE); relying on the mount's own uid/gid mapping" >&2
+fi
+if ! sudo -u "$USER_NAME" sh -c "touch '$ROOT/batches/.write_test' && rm -f '$ROOT/batches/.write_test'" 2>/dev/null; then
+    cat >&2 <<EOF
+$USER_NAME cannot write to $ROOT ($FSTYPE).
+  NFS: export the share with the uid of $USER_NAME ($(id -u "$USER_NAME")) allowed, or all_squash,anonuid=$(id -u "$USER_NAME"),anongid=$(id -g "$USER_NAME")
+  SMB: mount with uid=$USER_NAME,gid=$USER_NAME (in /etc/fstab, with _netdev)
+then re-run this script.
+EOF
+    exit 1
+fi
+# The UI (and the box's SFTP pushes) must not start before a network mount is there.
+if mountpoint -q "$ROOT" || mountpoint -q "$(dirname "$ROOT")"; then
+    install -d /etc/systemd/system/rlreplay-lab-ui.service.d
+    printf '[Unit]\nRequiresMountsFor=%s\n' "$ROOT" >/etc/systemd/system/rlreplay-lab-ui.service.d/mount.conf
+fi
 
 mkdir -p /etc/rlreplay; chmod 750 /etc/rlreplay; chgrp "$USER_NAME" /etc/rlreplay
 if [[ ! -f /etc/rlreplay/crawler_key ]]; then

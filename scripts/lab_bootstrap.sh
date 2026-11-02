@@ -16,7 +16,8 @@
 #   RL_REPO_URL          default https://github.com/JoshNotWright/RocketLeague-Analytics.git
 #   RL_BRANCH            default v2-replay-features
 #   RL_DEST              default /opt/rlreplay
-#   RL_ROOT              default /tank/rl        (the data tree; a ZFS/btrfs mirror ideally)
+#   RL_ROOT              the data tree. Default: /media/rocketleague/rl when that NAS mount is
+#                        present, else /tank/rl (a local ZFS/btrfs mirror).
 #   RL_USER              default rlreplay
 #   RL_LOCK_SSHD=1       also bind sshd to the tailnet IP and disable password login.
 #                        Off by default: it would cut a session that came in over the LAN.
@@ -25,7 +26,9 @@ set -euo pipefail
 REPO_URL="${RL_REPO_URL:-https://github.com/JoshNotWright/RocketLeague-Analytics.git}"
 BRANCH="${RL_BRANCH:-v2-replay-features}"
 DEST="${RL_DEST:-/opt/rlreplay}"
-ROOT="${RL_ROOT:-/tank/rl}"
+if [[ -n "${RL_ROOT:-}" ]]; then ROOT="$RL_ROOT"
+elif mountpoint -q /media/rocketleague 2>/dev/null; then ROOT=/media/rocketleague/rl
+else ROOT=/tank/rl; fi
 USER_NAME="${RL_USER:-rlreplay}"
 ENV_FILE=/etc/rlreplay/lab.env
 
@@ -112,7 +115,7 @@ if [[ ! -d "$ROOT" ]]; then
     parent="$(dirname "$ROOT")"
     if ! mountpoint -q "$parent" 2>/dev/null && [[ "$parent" != "/" ]]; then
         warn "$parent is not a mountpoint; $ROOT will live on the root filesystem."
-        warn "If the archive belongs on a mirror, create it first (see docs/DEPLOYMENT.md 1.1) or pass RL_ROOT."
+        warn "If the archive belongs on the NAS or a mirror, mount it first (docs/DEPLOYMENT.md 1.1) or pass RL_ROOT."
     fi
 fi
 # lab_setup.sh only writes the template when lab.env is absent; our stub must not block it.

@@ -77,7 +77,21 @@ It does not touch sshd unless you pass `RL_LOCK_SSHD=1` (do that from a Tailscal
 not a LAN one, or it cuts you off). Sections 1.1 to 1.7 below are what it does, by hand.
 
 ### 1.1 Storage
-A ZFS mirror is the recommended tree. Example with two disks:
+**NAS mount (the current lab).** The archive lives on the NAS mounted at `/media/rocketleague`;
+the tree is `/media/rocketleague/rl` and the bootstrap picks that by itself when the mount is
+present. Two things the mount must satisfy, both checked by `lab_setup.sh`:
+- the `rlreplay` user must be able to write there. Over NFS, export the share so that uid is
+  allowed (or `all_squash,anonuid=<uid>,anongid=<gid>`); over SMB, mount with
+  `uid=rlreplay,gid=rlreplay`. Ownership cannot be changed from the lab side, so the script
+  only warns when chown is refused and then tests a write as that user.
+- it must be in `/etc/fstab` with `_netdev`, so it comes up at boot before the UI. The setup
+  script adds `RequiresMountsFor=` to the UI service for the same reason.
+
+Throughput is not a concern: a batch is pushed at tailnet speed and read once by the validator.
+Keep the NAS's own snapshots or checksumming on for that share; the lab does no mirroring of
+its own.
+
+**Local mirror (alternative).** A ZFS mirror is the recommended tree. Example with two disks:
 ```bash
 sudo apt install -y zfsutils-linux
 sudo zpool create -o ashift=12 tank mirror /dev/disk/by-id/DISK_A /dev/disk/by-id/DISK_B
@@ -109,7 +123,7 @@ on the lab later needs the v2 requirements in a venv; not needed for crawling.)
 
 ### 1.4 One-time setup script
 ```bash
-sudo /opt/rlreplay/scripts/lab_setup.sh --root /tank/rl --user rlreplay
+sudo /opt/rlreplay/scripts/lab_setup.sh --root /media/rocketleague/rl --user rlreplay
 ```
 It creates the `rlreplay` system user and the tree (`decoded/ meta/ batches/ boxes/ features/`),
 generates two keys, writes `/etc/rlreplay/lab.env` from the template, installs the UI service,
@@ -135,7 +149,7 @@ Set the three secrets and check the rest:
 | `HCLOUD_TOKEN` | from 0.1 |
 | `BALLCHASING_API_KEY` | from 0.3 |
 | `TS_AUTHKEY` | from 0.2 |
-| `LAB_ROOT` | `/tank/rl` |
+| `LAB_ROOT` | `/media/rocketleague/rl` (NAS) or `/tank/rl` (local mirror) |
 | `LAB_USER` | `rlreplay` |
 | `LAB_TS_HOST` | the lab's tailnet IP from 1.2 (an IP, not the MagicDNS name: the box resolves it through rclone) |
 | `LAB_REPO` | `/opt/rlreplay` |
@@ -203,9 +217,9 @@ replays, so after a few minutes the first 500-replay batch seals, pushes and val
 Transfers page shows it **✓ validated** and the box's "batches on the box" shows it cleaned.
 Check on the lab:
 ```bash
-ls /tank/rl/decoded/ranked-doubles/diamond/2025-07 | head
-wc -l /tank/rl/meta/ranked-doubles/*/2025-07.jsonl
-cat /tank/rl/batches/*.ok
+ls /media/rocketleague/rl/decoded/ranked-doubles/diamond/2025-07 | head
+wc -l /media/rocketleague/rl/meta/ranked-doubles/*/2025-07.jsonl
+cat /media/rocketleague/rl/batches/*.ok
 ```
 Then **Stop and delete**. It stops the service (the box seals and pushes the rest), waits for
 validation, deletes the server. Confirm with `hcloud server list` (empty) and in the Tailscale
@@ -252,9 +266,9 @@ cd /opt/rlreplay && python3 -m venv .venv && .venv/bin/pip install -r requiremen
 ```
 Then per band and month (the decoded folder is the input; no raws are needed):
 ```bash
-.venv/bin/python -m rlreplay decisions-build --decoded /tank/rl/decoded/ranked-doubles/diamond/2025-07 --out /tank/rl/features/decisions/diamond/2025-07 --horizon 2.5
+.venv/bin/python -m rlreplay decisions-build --decoded /media/rocketleague/rl/decoded/ranked-doubles/diamond/2025-07 --out /media/rocketleague/rl/features/decisions/diamond/2025-07 --horizon 2.5
 ```
-and `extract` / `touches` likewise. Sync `/tank/rl/features` to your PC with rclone over the
+and `extract` / `touches` likewise. Sync `/media/rocketleague/rl/features` to your PC with rclone over the
 tailnet before a refit. Pull a decoded folder locally only to prototype a feature.
 
 ---

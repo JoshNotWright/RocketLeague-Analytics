@@ -127,9 +127,13 @@ class JobLifecycleTests(unittest.TestCase):
         self.assertEqual([x["id"] for x in o["jobs"]], [jid])
         self.assertIsNone(o["active_job"])
 
+        stale = self.root / "boxes" / "rl-crawler" / "status.json"
+        stale.parent.mkdir(parents=True, exist_ok=True)
+        stale.write_text(json.dumps({"box": "rl-crawler", "job": "old-job", "updated": "2026-01-01T00:00:00Z", "phase": "stopped"}))
         status, j = self.job("start", id=jid)
         self.assertEqual((status, j["state"]), (200, "running"))
         self.assertEqual(self.control(), "run")
+        self.assertFalse(stale.exists())   # the previous box's report is not shown as this job's
         o = self.wait_ops()
         self.assertEqual(o["ops"][-1]["args"], ["--job", jid])
         self.assertEqual(o["ops"][-1]["job"], jid)

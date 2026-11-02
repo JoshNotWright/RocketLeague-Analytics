@@ -362,6 +362,10 @@ class Lab:
             if other:
                 raise ValueError(f"'{other['name']}' is {other['state']}; stop it first")
             self.set_control(self.box_name, "run")
+            # The previous box's last report would otherwise be shown as this job's until the new
+            # box reports; history.jsonl keeps the points, the status file is the live view only.
+            (self.root / "boxes" / self.box_name / "status.json").unlink(missing_ok=True)
+            self._history_last.pop(self.box_name, None)
             return self._run_for_job(job_id, "running", "up", ["--job", job_id], "running", "start failed")
         if action == "pause":
             if job["state"] != "running":
